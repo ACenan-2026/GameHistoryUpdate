@@ -1,0 +1,23 @@
+﻿@{
+    ViewBag.Title = "GameInRestore";
+}
+
+<style type="text/css">
+    h2 {
+        padding-bottom: 1px;
+        padding-top: 5px;
+        text-align: center;
+    }
+</style>
+<div id="btnClose" onclick="closeGameIsInRestore();"><img src="~/Content/Images/CloseButton.png"></div>
+<h2>Game is in restore</h2>
+
+<script>
+    function closeGameIsInRestore() {
+        $("#popup").html("");
+        $("#popupWrapper").hide();
+    }
+
+</script>
+
+

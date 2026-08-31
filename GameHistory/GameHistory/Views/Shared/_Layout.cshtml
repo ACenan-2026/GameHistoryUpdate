@@ -1,0 +1,15 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewBag.Title</title>
+     
+     @*@System.Web.Optimization.Styles.Render("~/Content/")*@
+      <link rel="stylesheet" href="@Url.Content("~/Content/style.css")" />
+    <script src="~/jquery.min.js"></script>
+</head>
+<body>
+ 
+    @RenderBody()
+</body>
+</html>

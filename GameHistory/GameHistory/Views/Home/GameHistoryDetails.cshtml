@@ -1,0 +1,80 @@
+﻿@using GameHistory.Helpers
+@model GameHistory.Models.GameHistoryGameInfoModel
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<style type="text/css">
+
+    .header-style {
+        padding-bottom: 1px;
+        padding-top: 1px;
+        text-align: center;
+
+    }
+    .row-style {
+        padding-bottom: 4px;
+        padding-top: 5px;
+        text-align: center;
+    }
+
+    .alt {
+        text-align: center;
+        background-color: #DAEEF3; 
+    }
+    h3 {
+        padding-bottom: 1px;
+        padding-top: 1px;
+        text-align: center;
+    }
+</style>
+
+
+
+@helper getBetPerLine(decimal totalBet, decimal linesPlayed) {
+    decimal betPerLine = totalBet / linesPlayed;    
+    @betPerLine
+    }
+
+<div id="btnClose" onclick="closePopUp();"><img src="~/Content/Images/CloseButton.png"></div>
+
+@*<b>Lines Played:    </b>         @Model.UserPositions.SlotUsersPositionsAndDetails.SlotDetails.SlotDetails[0].Position
+    <b>Bet Per Line:    </b>        @getBetPerLine(Convert.ToDecimal(@Model.GameHistoryGameInfoSlotModel.Bet), Convert.ToDecimal(@Model.UserPositions.SlotUsersPositionsAndDetails.SlotDetails.SlotDetails[0].Position))
+    <br />*@
+<b>GameId:        </b>         @Model.GameHistoryGameInfoSlotModel.GameId
+
+    @*<b>GameIdentifier:</b> @Model.GameHistoryGameInfoSlotModel.GameIdentifier       <br />
+    <b>GameName: </b>      @Model.GameHistoryGameInfoSlotModel.GameName             <br />*@
+<!--b>Stake: </b>         @Model.GameHistoryGameInfoSlotModel.Stake                <br />
+<b>Won: </b>           @Model.GameHistoryGameInfoSlotModel.Won                  <br />
+<b>Revenue:</b>        @Model.GameHistoryGameInfoSlotModel.Revenue              <br />--><br />
+
+
+ @{
+     var grid = new WebGrid(Model.UserPositions.SlotUsersPositionsAndDetails.SlotDetails.SlotDetails, canSort:false, canPage: false);
+
+    @grid.GetHtml(tableStyle: "webGrid",
+            headerStyle: "header-style",
+            rowStyle: "row-style",
+            alternatingRowStyle: "alt",
+            selectedRowStyle: "select",
+            emptyRowCellValue: "N/A",
+            columns: grid.Columns(
+            grid.Column("Total Bet", format: (item) => Html.Raw(item.BetDetail), style: "betWinColumn"),
+            grid.Column("Won", "Win", style:"betWinColumn"),
+            grid.Column("Wins", format: (item) => Html.Raw(item.WinDetails), style: "winsColumn"),
+            grid.Column("Outcome", format: (item) => Html.Raw(item.Symbols), style:"symbolsColumn")
+            //grid.Column("Position", "LinesPlayed"),
+            //grid.Column("BetType", "BetType"),
+            //grid.Column("VirtualBet", "Virtual Bet"),
+            //grid.Column("VirtualWon", "Virtual Won"),
+            //grid.Column("Wins", format: (item) => Html.Raw(item.Type == "Payline" ? "Line : " + item.PositionOutcome : "Scatter : " + item.WonOutcome), style: "winsColumn"),
+            //grid.Column("Payline ID", format: (item) => Html.Raw(item.PositionOutcome)),
+            //grid.Column("Payline ID", format: (item) => Html.Raw(item.PositionOutcome)),
+            //grid.Column("Detail Win", format: (item) => Html.Raw(item.WonOutcome)),                
+            //grid.Column("Details", format: (item) => Html.Raw(item.Details)),
+            ));
+}
+ 
+

@@ -1,0 +1,37 @@
+﻿@model string
+@{
+    ViewBag.Title = "Technical problems";
+}
+
+<style type="text/css">
+    h2 {
+        padding-bottom: 1px;
+        padding-top: 5px;
+        text-align: center;
+    }
+</style>
+
+@{
+    string clientType = "";
+    if (!string.IsNullOrEmpty(Request["clientType"]))
+    {
+        clientType = Request["clientType"];
+    }  
+}
+
+@*AGT Comment - Added close button for HTML client and on click sending message to client to close Game History*@
+@{
+    if (clientType.Equals("HTML"))
+    {
+        <div id="btnCloseError" onclick="closeError();"><img src="~/Content/Images/CloseButton.png"></div>
+    }
+}
+
+<h2>Unable to retrive data</h2>
+
+<script>
+    function closeError() {
+        window.parent.postMessage('hideHistory', '*');
+    }
+
+</script>

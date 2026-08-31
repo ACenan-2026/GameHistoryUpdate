@@ -1,0 +1,22 @@
+﻿@{
+    ViewBag.Title = "Invalid Data";
+}
+<style type="text/css">
+    h2 {
+        padding-bottom: 1px;
+        padding-top: 5px;
+        text-align: center;
+    }
+</style>
+ <div id="btnClose" onclick="closeInvalidData();"><img src="~/Content/Images/CloseButton.png"></div>
+<h2>No Records Found</h2>
+
+<script>
+    function closeInvalidData() {
+        $("#popup").html("");
+        $("#popupWrapper").hide();
+    }
+
+</script>
+
+

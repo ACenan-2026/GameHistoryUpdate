@@ -1,0 +1,297 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{DA09F89E-6313-4FAB-9FF3-934553A1AEC8}</ProjectGuid>
+    <ProjectTypeGuids>{E3E379DF-F4C6-4180-9B81-6769533ABE47};{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GameHistory</RootNamespace>
+    <AssemblyName>GameHistory</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <MvcBuildViews>false</MvcBuildViews>
+    <UseIISExpress>false</UseIISExpress>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+    <TargetFrameworkProfile />
+    <Use64BitIISExpress />
+    <UseGlobalApplicationHostFile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\external\log4net\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Abstractions" />
+    <Reference Include="System.Web.Routing" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Web.Services" />
+    <Reference Include="System.EnterpriseServices" />
+    <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.4.5.6\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.Net.Http.2.0.20710.0\lib\net40\System.Net.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.Formatting, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.4.0.20710.0\lib\net40\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.Net.Http.2.0.20710.0\lib\net40\System.Net.Http.WebRequest.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Helpers, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.4.0.20710.0\lib\net40\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.WebHost.4.0.20710.0\lib\net40\System.Web.Http.WebHost.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.4.0.20710.0\lib\net40\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.Razor.2.0.20710.0\lib\net40\System.Web.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.WebPages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.WebPages.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <Private>True</Private>
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.2.0.20710.0\lib\net40\System.Web.WebPages.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\DateTimeExtensions.cs" />
+    <Compile Include="Helpers\GameExtensions.cs" />
+    <Compile Include="Helpers\PageConfiguration.cs" />
+    <Compile Include="Models\GameHistoryModel.cs" />
+    <Compile Include="Models\Models.cs" />
+    <Compile Include="Models\PlayerActivityLogModel.cs" />
+    <Compile Include="Models\SlotSymbolReelViewModel.cs" />
+    <Compile Include="Models\SlotSymbolTableViewModel.cs" />
+    <Compile Include="Models\SlotSymbolViewModel.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\WebApiConfig.cs" />
+    <Content Include="Content\Images\Cards\b.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\Cards\c.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\Cards\d.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\Cards\h.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\Cards\r.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\Cards\s.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Images\CloseButton.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Ae.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Aef.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Bd.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Bdf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Cn.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Fg.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Fgf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Gnx1.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Gnx2.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Gnx3.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Gnx4.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Gnx5.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Jk.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Jkf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Kg.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Kgf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Mh.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Mhf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\My.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Myf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Ne.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Nef.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Qn.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Qnf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Te.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Tef.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Tn.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Tnf.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Tr.png" />
+    <Content Include="Content\Images\KingChameleon\Desktop\Trf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Ae.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Aef.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Bd.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Bdf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Cn.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Fg.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Fgf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Gnx1.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Gnx2.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Gnx3.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Gnx4.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Gnx5.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Jk.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Jkf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Kg.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Kgf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Mh.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Mhf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\My.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Myf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Ne.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Nef.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Qn.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Qnf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Te.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Tef.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Tn.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Tnf.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Tr.png" />
+    <Content Include="Content\Images\KingChameleon\Mobile\Trf.png" />
+    <Content Include="Content\style.css" />
+    <Content Include="CurrencyCode.xml" />
+    <Content Include="Global.asax" />
+    <Content Include="jquery.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </Content>
+    <Content Include="Views\Web.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="App_Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Home\GameHistoryDetails.cshtml" />
+    <Content Include="Views\Home\GameHistoryLog.cshtml" />
+    <Content Include="Views\Home\Index.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Shared\Error.cshtml" />
+    <Content Include="Views\Shared\_Layout.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\_ViewStart.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\PublishProfiles\GameHistoryDebug_Deploy.pubxml" />
+    <None Include="Properties\PublishProfiles\GameHistory_Deploy.pubxml" />
+    <Content Include="Views\Home\GameInRestore.cshtml" />
+    <Content Include="Views\Home\InvalidData.cshtml" />
+    <Content Include="Views\Home\ErrorPage.cshtml" />
+    <Content Include="Views\Home\BusyPage.cshtml" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <Target Name="MvcBuildViews" AfterTargets="AfterBuild" Condition="'$(MvcBuildViews)'=='true'">
+    <AspNetCompiler VirtualPath="temp" PhysicalPath="$(WebProjectOutputDir)" />
+  </Target>
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>True</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>61924</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost/GameHistory</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target> -->
+</Project>

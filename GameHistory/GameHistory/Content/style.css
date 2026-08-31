@@ -1,0 +1,252 @@
+﻿body {
+    background-color: #F5F5F5;
+}
+.webGrid {
+  color: #333;
+  font-family: Helvetica, Arial, sans-serif;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background-color: #D8D8D8;
+  width: 100%;
+  margin: 20px 0px;
+}
+
+.betWinColumn {
+  width: 15%;
+}
+.winsColumn {
+  width: 40%;
+}
+.symbolsColumn {
+  width: 30%;
+}
+
+.webGrid a:hover
+{  
+   text-decoration: underline;
+   cursor:pointer;   
+}
+.webGrid th, .webGrid td {
+  border: 1px solid transparent;
+  height: 30px;
+  transition: all 0.3s;
+}
+.header {
+  background: #DFDFDF;
+}
+.header a {
+  text-decoration: none;
+  color: #333;
+}
+.header a:hover {
+  text-decoration: underline;
+  font-weight: bold;
+}
+.alt {
+  background-color: #F1F1F1;
+}
+.gridHead a:hover {
+  text-decoration: underline;
+}
+.description {
+  width: auto
+}
+.select {
+  background-color: #71857C
+}
+
+.PreviousPage {
+float: left;
+margin-left: 10%;
+margin-bottom: 10px;
+}
+
+.PreviousPage a {
+  color: black;
+  padding: 10px;
+  text-decoration: none;
+}
+.PreviousPage a:hover {
+  font-weight: bold;
+  text-decoration: underline;
+  cursor:pointer;
+}
+
+.NextPage {
+float: right;
+margin-right: 10%;
+margin-bottom: 10px;
+}
+
+.NextPage a {
+  color: black;
+  padding: 10px;
+  text-decoration: none;
+}
+.NextPage a:hover {
+  font-weight: bold;
+  text-decoration: underline;
+  cursor:pointer;
+}
+
+#popupWrapper {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display:none;
+}
+
+#popup 
+{
+  z-index: 200;
+  width: 90%;
+  height: 90%;
+  margin: 3% 3% auto 4%;
+  position: absolute;
+  border-radius: 10px;
+  padding: 10px 10px 10px 10px;
+  overflow: scroll;
+  background-color: #ECECEA;
+}
+
+#btnClose {
+  top: 7%;
+  right: 7%;
+  position: fixed;
+  font-weight: bolder;
+}
+
+#btnClose:hover {
+	text-decoration: underline;
+	cursor:pointer;
+}
+
+#btnCloseHistory {
+  top: 2%;
+  right: 2%;
+  position: fixed;
+  font-weight: bolder;
+}
+
+#btnCloseHistory:hover {
+	text-decoration: underline;
+	cursor:pointer;
+}
+#btnCloseBusy {
+  top: 2%;
+  right: 2%;
+  position: fixed;
+  font-weight: bolder;
+}
+
+#btnCloseBusy:hover {
+	text-decoration: underline;
+	cursor:pointer;
+}
+
+#btnCloseError {
+  top: 2%;
+  right: 2%;
+  position: fixed;
+  font-weight: bolder;
+}
+
+#btnCloseError:hover {
+	text-decoration: underline;
+	cursor:pointer;
+}
+
+@media screen and (max-device-width: 991.98px), screen and (max-width: 991.98px){
+	body {
+		font-size: 2em;
+	}
+	
+	h3 {
+		font-size: 1.5em;
+	}
+	
+	#btnCloseHistory img, #btnClose img {
+		transform: scale(1.5);
+	}
+	
+	td:nth-child(3) {
+		color: blue;
+	}
+	
+	#popup td:nth-child(3) {
+		color: initial;
+	}
+}
+
+@media (orientation:portrait){
+	body {
+		font-size: 3em;
+	}
+	
+	h3 {
+		font-size: 1.5em;
+	}
+	
+	#btnCloseHistory {
+		top: 0.7%;
+		right: 3%;
+	}
+	
+	#btnCloseHistory img, #btnClose img {
+		transform: scale(2.5);
+	}
+	
+	.PreviousPage {
+		margin-left: 5%;
+	}
+	
+	.NextPage {
+		margin-right: 5%;
+	}
+	
+	td:first-child {
+		font-weight: bold;
+	}
+	
+	td:first-child, td:last-child {
+		white-space: pre-wrap;
+		width: 20%;
+	}
+	
+	td:nth-child(3) {
+		color: blue;
+	}
+	
+	#popup {
+		width: 95%;
+		height: 97%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		margin: unset;
+	}
+	
+	#btnClose {
+		top: 0.5%;
+        right: 2%;
+	}
+	
+	#popup td:first-child {
+		font-weight: initial;
+		width: initial;
+	}
+	
+	#popup td:nth-child(3) {
+		color: initial;
+		width: initial;
+	}
+	
+	#popupWrapper td:last-child {
+		white-space: initial;
+	}
+}

@@ -1,0 +1,239 @@
+﻿@using GameHistory.Helpers
+@model IList<GameHistory.Models.PlayerActivityLogModel>
+@{
+   // ViewBag.Title = "Index";
+}
+
+<style type="text/css">
+    .header-style {
+        padding-bottom: 4px;
+        padding-top: 1px;
+        text-align: center;
+    }
+
+    .row-style {
+        padding-bottom: 4px;
+        padding-top: 5px;
+        text-align: center;
+    }
+
+    .alt{
+        text-align: center;
+        background-color: #DAEEF3; 
+    }
+
+    h2 {
+        padding-bottom: 1px;
+        padding-top: 5px;
+        text-align: center;
+    }
+
+    h3 {
+        padding-bottom: 2px;
+        padding-top: 2px;
+        text-align: center;
+    }
+</style>
+
+@{
+    if (@Model.Count > 0)
+    {
+        <h3>@Model[0].GameName Game History</h3>
+    }
+    else
+    {
+        <h3>  No Game Records Found </h3>
+    }
+
+    string pageSize = "10";
+    if (!string.IsNullOrEmpty(Request["pageSize"]))
+    {
+        if (Request["pageSize"].Equals("0"))
+        {
+            pageSize = "10";
+        }
+        else
+        {
+            pageSize = Request["pageSize"];
+        }
+    }
+    
+    int numOfEntriesPerPage = 0;
+    if (!int.TryParse(pageSize, out numOfEntriesPerPage))
+    {
+         numOfEntriesPerPage = 10;          
+    }
+    
+    int pageNumber = 1;
+    if (!string.IsNullOrEmpty(Request["page"]))
+    {
+        if (!int.TryParse(Request["page"], out pageNumber))
+        {
+            pageNumber = 1;
+        }
+    }
+
+    string extGameId = "";
+    if (!string.IsNullOrEmpty(Request["ExtGameId"]))
+    {
+        extGameId = Request["ExtGameId"];
+    }
+
+    string extUserId = "";
+    if (!string.IsNullOrEmpty(Request["extUserId"]))
+    {
+        extUserId = Request["extUserId"];
+    }
+
+    string sessionId = "";
+    if (!string.IsNullOrEmpty(Request["sessionId"]))
+    {
+        sessionId = Request["sessionId"];
+    }
+
+    // AGT Comment - platform type will be sent from client 
+    // dependign on what platform the client is loaded
+    string platformType = "Desktop";
+    if (!string.IsNullOrEmpty(Request["platform"]))
+    {
+        platformType = Request["platform"];
+    }
+
+    // AGT Comment - client type will be sent from client 
+    // Will use this to determine HTML5 or flash client
+    string clientType = "";
+    if (!string.IsNullOrEmpty(Request["clientType"]))
+    {
+        clientType = Request["clientType"];
+    } 
+
+}
+
+@*AGT Comment - Added close button for HTML client and on click sending message to client to close Game History*@
+@{
+    if (clientType.Equals("HTML"))
+    {
+        <div id="btnCloseHistory" onclick="closeHistory();"><img src="~/Content/Images/CloseButton.png"></div>
+    }
+}
+
+@if (platformType.Equals("Mobile"))
+{
+
+    if (pageNumber > 1)
+    {
+        <div class="PreviousPage">
+            <a style="color: blue; font-weight: bold; text-decoration: underline;" onclick="changePage(@pageNumber - 1)">Previous</a>
+        </div>
+        @*<div onclick="changePage(@pageNumber - 1)"><img src="~/Content/Images/prevSet.png"></div>*@
+    }
+
+    if (Model.Count == numOfEntriesPerPage)
+    {
+        <div class="NextPage">
+            <a style="color: blue; font-weight: bold; text-decoration: underline;" onclick="changePage(@pageNumber + 1)">Next</a>
+        </div>
+        @*<div onclick="changePage(@pageNumber + 1)"><img src="~/Content/Images/nextSet.png"></div>*@
+    }
+}
+
+
+@{
+    
+    var grid = new WebGrid(Model, canPage: false, canSort:false, rowsPerPage: 10);
+    }
+
+    @grid.GetHtml(tableStyle: "webGrid",
+            headerStyle: "header-style",
+            rowStyle: "row-style",
+            alternatingRowStyle: "alt",
+            selectedRowStyle: "select",
+            columns: grid.Columns(
+            grid.Column("Start Time", format: (item) => new HtmlString(item.StartBalance == "Incomplete Game" ? string.Format("<b>" + item.StartTime + "</b>", item.GameId, item.Identifier) : string.Format("<a style=\"border-bottom:1px solid #00FF00; color:blue;\" onclick='postData({0},\"{1}\")'>" + item.FormatedStartTime + "</a>", item.GameId, item.Identifier))),
+            grid.Column("StartBalance", "Start Balance"),
+            grid.Column("EndBalance", "End Balance"),
+            //grid.Column("Stake", "Total Bet"),
+            grid.Column("Won", "Won"),
+            //grid.Column("StopTime", "StopTime"),
+            grid.Column("FormatedStopTime", "Stop Time")
+            //grid.Column("Lost", "Lost"),
+            //grid.Column("StartTime", "StartTime"),
+            //grid.Column("ContentTypeId", "ContentTypeId"),
+            //grid.Column("Currency", "Currency"),
+            //grid.Column("DisplayName", "DisplayName"),
+            //grid.Column("GameName", "GameName"),
+            //grid.Column("ExtGameIdentifier", "ExtGameIdentifier"),
+            //grid.Column("Details", format: (item) => new HtmlString(string.Format("<a style=\"border-bottom:1px solid #FF0000; color:blue;\" onclick='postData({0},\"{1}\")'>" + item.GameId + "</a>", item.GameId, item.Identifier))),
+            //grid.Column("Identifier", "Identifier"),
+            //grid.Column("GameName", "GameName"),
+            //grid.Column("ExtGameIdentifier", "ExtGameIdentifier"),
+            //grid.Column("Details", format: (item) => new HtmlString(string.Format("<a onclick='postData({0},\"{1}\")'> Details </a>", item.GameId, item.Identifier)))
+           ))
+ 
+
+ <script type="text/javascript">
+
+    // AGT Comment - Added platformType to load a different sent of content for a different platform
+    function postData(id, identifier) {
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("GameHistoryDetails","Home")',
+            data: { id: id, identifier: identifier, sessionId: '@sessionId', extUserId: '@extUserId', platformType: '@platformType' },
+            success: function (data) {
+                $("#popup").html(data);
+                $("#popupWrapper").show();
+            }
+        });
+    };
+     // AGT Comment - value for platform is loaded from request parameter, everytime previous/next button is pressed
+    function changePage(page) {
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("Index","Home")',
+            data: { extGameId: '@extGameId', extUserId: '@extUserId', sessionId: '@sessionId', page: page, pageSize: '@pageSize', platform: '@platformType', clientType: '@clientType' },
+            success: function (data) {
+                $("body").html(data);
+            }
+        });
+    };
+
+    function closePopUp() {
+        $("#popup").html("");
+        $("#popupWrapper").hide();
+    }
+
+    // AGT Comment - Sendign message to client to close Game History Window
+    function closeHistory() {
+        window.parent.postMessage('hideHistory', '*');
+    }
+
+
+</script>
+@if (platformType.Equals("Desktop"))
+{
+
+    if (pageNumber > 1)
+    {
+        <div class="PreviousPage">
+            <a onclick="changePage(@pageNumber - 1)">Previous</a>
+        </div>
+        @*<div onclick="changePage(@pageNumber - 1)"><img src="~/Content/Images/prevSet.png"></div>*@
+    }
+
+    if (Model.Count == numOfEntriesPerPage)
+    {
+        <div class="NextPage">
+            <a onclick="changePage(@pageNumber + 1)">Next</a>
+        </div>
+        @*<div onclick="changePage(@pageNumber + 1)"><img src="~/Content/Images/nextSet.png"></div>*@
+    }
+}
+
+<div id="popupWrapper">
+    
+    <div id="popup">
+
+    </div> 
+</div>
+
+
