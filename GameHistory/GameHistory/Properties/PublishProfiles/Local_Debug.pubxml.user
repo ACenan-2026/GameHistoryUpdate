@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\inetpub\wwwroot\GameHistory</_PublishTargetUrl>
+    <History>True|2026-09-01T00:00:42.1748825Z||;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+  <ItemGroup>
+    <File Include="bin/Content/Images/Cards/b.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/Content/Images/Cards/c.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/Content/Images/Cards/d.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/Content/Images/Cards/h.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/Content/Images/Cards/r.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/Content/Images/Cards/s.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="bin/GameHistory.dll">
+      <publishTime>09/01/2026 10:00:40</publishTime>
+    </File>
+    <File Include="bin/GameHistory.pdb">
+      <publishTime>09/01/2026 10:00:40</publishTime>
+    </File>
+    <File Include="bin/jquery.min.js">
+      <publishTime>02/16/2026 14:00:02</publishTime>
+    </File>
+    <File Include="bin/log4net.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/Microsoft.Web.Infrastructure.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/Newtonsoft.Json.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Net.Http.Formatting.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.Helpers.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.Http.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.Http.WebHost.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.Mvc.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.Razor.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.WebPages.Deployment.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.WebPages.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="bin/System.Web.WebPages.Razor.dll">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/b.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/c.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/d.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/h.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/r.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/Cards/s.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/CloseButton.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Ae.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Aef.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Bd.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Bdf.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Cn.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Fg.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Fgf.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Gnx1.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Gnx2.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Gnx3.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Gnx4.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Gnx5.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Jk.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Jkf.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Kg.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Kgf.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Mh.png">
+      <publishTime>08/27/2026 10:43:20</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Mhf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/My.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Myf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Ne.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Nef.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Qn.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Qnf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Te.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Tef.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Tn.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Tnf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Tr.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Desktop/Trf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Ae.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Aef.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Bd.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Bdf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Cn.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Fg.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Fgf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Gnx1.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Gnx2.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Gnx3.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Gnx4.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Gnx5.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Jk.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Jkf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Kg.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Kgf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Mh.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Mhf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/My.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Myf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Ne.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Nef.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Qn.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Qnf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Te.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Tef.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Tn.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Tnf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Tr.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/Images/KingChameleon/Mobile/Trf.png">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Content/style.css">
+      <publishTime>08/27/2026 11:31:55</publishTime>
+    </File>
+    <File Include="CurrencyCode.xml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Global.asax">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="jquery.min.js">
+      <publishTime>02/16/2026 14:00:02</publishTime>
+    </File>
+    <File Include="packages.config">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/BusyPage.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/ErrorPage.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/GameHistoryDetails.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/GameHistoryLog.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/GameInRestore.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/Index.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Home/InvalidData.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Shared/Error.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Shared/_Layout.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/Web.config">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Views/_ViewStart.cshtml">
+      <publishTime>08/27/2026 10:43:21</publishTime>
+    </File>
+    <File Include="Web.config">
+      <publishTime>09/01/2026 10:00:41</publishTime>
+    </File>
+  </ItemGroup>
+</Project>
