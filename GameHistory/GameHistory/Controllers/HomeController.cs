@@ -27,6 +27,18 @@ namespace GameHistory.Controllers
         private static ILog sLog = LogManager.GetLogger(typeof(HomeController));
         private static bool isBusy = false;
         private XmlNodeList currencyNodeList = null;
+
+        // ===== DEPLOY PIPELINE TEST MARKER — safe to delete after verifying =====
+        // Browse to  /Home/Ping  on the local test site. Bump the "v1" text,
+        // publish, then refresh: if the new text appears, source changes are
+        // flowing through compile -> GameHistory.dll -> wwwroot correctly.
+        [AcceptVerbs(HttpVerbs.Get)]
+        public ActionResult Ping()
+        {
+            return Content("GameHistory deploy test — marker v1 — served " + DateTime.Now);
+        }
+        // =======================================================================
+
         [AcceptVerbs(HttpVerbs.Get | HttpVerbs.Post)]
         public ActionResult Index(string extUserId, string extGameId, string dateFrom = null, string dateTo = null, string pageSize = "10", string page = "1", string sessionId = null, string  operatorId = null, string platform = "Desktop", string clientType = null)
         {
