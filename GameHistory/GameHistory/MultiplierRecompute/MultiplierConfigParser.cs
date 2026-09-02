@@ -31,8 +31,8 @@ namespace GameHistory.MultiplierRecompute
     public sealed class MultiplierParams
     {
         public int Multiplier {  get; }
-        public StrategySpec Strategy { get; }
         public bool Paid { get; }
+        public StrategySpec Strategy { get; }
 
         public MultiplierParams(int multiplier, bool paid, StrategySpec strategy)
         {
@@ -43,6 +43,9 @@ namespace GameHistory.MultiplierRecompute
 
     } 
 
+    /// <summary>
+    /// Maps multiplier symbol names to their corresponding params (see <cref cref="MultiplierParams" />.
+    /// </summary>
     public class MultiplierSymbolMapping
     {
         private readonly Dictionary<string, MultiplierParams> _mappings =
