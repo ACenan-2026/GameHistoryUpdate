@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  *** INTENTIONALLY WRONG — NEGATIVE TEST ONLY ***
+  Game History multiplier config for RichCluckinEggsUltimate.
 
-  RichCluckinEggs multipliers actually use the LINE-BET TOTAL as their base (base = 5.0 on the
-  sample round, where total bet = 7.50). This config deliberately uses the TotalBet strategy so the
-  computed values are wrong on purpose, to prove the validator's WARN path fires.
+  Strategy: LineBetFromStaticMultiplier
+    base = total_bet * numLines / staticBetMultiplier
+    e.g. 7.50 * 50 / 75 = 5.00  ->  B01 -> 5.00, B05 -> 25.00 (matches recorded located-scatter wins).
 
-  Expected on the sample round (total bet = 7.50, so base is wrongly taken as 7.50):
-    computed  B01 -> 7.50,  B05 -> 37.50
-    recorded located-scatter wins -> 5.00 and 25.00 (base = 5.0: 5x1 and 5x5)
-    => neither matches => WARN "recorded located-scatter win 5.00/25.00 has no matching computed value"
-       plus DEBUG "computed B01=7.50 / B05=37.50 has no matching recorded win".
+  These are the game's fixed constants:
+    numLines            = 50   (paylines, constant for this game)
+    staticBetMultiplier = 75   (total_bet = bet_per_line * 75)
+  Only valid while both are constant per spin — do not use this strategy for a variable-line game.
 
-  RUNTIME LOCATION (to run the test): copy to
+  Symbol names are the GRID codes from SlotUserPositionDict.Positions (uppercase, zero-padded),
+  NOT the (lowercase) image filenames. Matching is case-sensitive.
+  All located-scatter multipliers in this game are paid (there is no TB / unpaid variant).
+  Wd wild multipliers exist but fold into payline wins, so they are not listed here (Phase 1
+  does not validate them).
+
+  RUNTIME LOCATION: copy this file to
     C:\inetpub\wwwroot\GameConfig\RichCluckinEggsUltimate\RichCluckinEggsUltimate_history.xml
-  Delete it again afterwards so it doesn't mislead a real run.
-
-  (Wd wild multipliers exist for this game but fold into payline wins, so Phase 1 does not validate
-   them; they are omitted here to keep the test output focused on located scatters.)
 -->
 <GameHistoryConfig gameName="RichCluckinEggsUltimate">
   <multiplierGroups>
-    <group name="LocatedScatter" strategy="TotalBet">
+    <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="50" staticBetMultiplier="75">
       <symbol name="B01"  value="1"   paid="true" />
       <symbol name="B02"  value="2"   paid="true" />
       <symbol name="B03"  value="3"   paid="true" />
