@@ -1,4 +1,6 @@
 using GameHistory.Models;
+using log4net;
+using System.Collections.Generic;
 using System.Globalization;
 
 
@@ -51,6 +53,34 @@ namespace GameHistory.MultiplierRecompute
     }
 
     /// <summary>
+    /// Computes base = total_bet * numerator / denominator (multiply before divide, so an unreduced ratio like
+    /// 50/75 is as exact as 2/3). This is the line-bet total expressed as a fixed fraction of the total bet.
+    ///
+    /// ASSUMES the ratio is constant for the game. It is fed either as a raw ratio ("LineBetTotal") or as the
+    /// game constants numLines/staticBetMultiplier ("LineBetFromStaticMultiplier") — both resolve to this class.
+    /// Do NOT use for games where the line count (or the bet multiplier) can vary per spin: there the ratio
+    /// is not constant and total_bet alone cannot recover the base.
+    /// </summary>
+    public sealed class LineBetTotalStrategy : IMultiplierBaseStrategy
+    {
+        // numerator/denominator of the fixed line-bet-total : total-bet ratio
+        private readonly decimal _numerator;
+        private readonly decimal _denominator;
+
+        public LineBetTotalStrategy(decimal numerator, decimal denominator)
+        {
+            _numerator = numerator;
+            _denominator = denominator;
+        }
+
+        public decimal? GetBase(GameHistoryGameInfoSlotModel s) =>
+            ComputationHelpers.TryParseMoney(s?.Bet, out var totalBet) 
+                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero)
+                : (decimal?)null;
+    }
+
+
+    /// <summary>
     /// Factory class to resolve the appropriate multiplier base strategy based on a given type.
     /// This allows for easy extension and addition of new strategies in the future.
     /// Returns null for an unknown / not-yet-implemented strategy type so the caller can degrade gracefully;
@@ -58,12 +88,52 @@ namespace GameHistory.MultiplierRecompute
     /// </summary>
     public static class MultiplierBaseStrategyResolver
     {
-        public static IMultiplierBaseStrategy Resolve(string type)
+
+        private static readonly ILog sLog = LogManager.GetLogger(typeof(MultiplierBaseStrategyResolver));
+
+        /// <summary>
+        /// Given a dictionary, attempts to get the integer value assoicated with a specified key.
+        /// Returns true if the key exists and the value can be parsed as an integer; otherwise, returns false.
+        /// </summary>
+        /// <param name="attrs">The dictionary to read from</param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private static bool TryGetInt(IReadOnlyDictionary<string, string> attrs, string key, out int value)
+        {
+            value = 0;
+            return attrs != null
+                && attrs.TryGetValue(key, out var raw)
+                && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+        }
+
+        public static IMultiplierBaseStrategy Resolve(string type, IReadOnlyDictionary<string, string> attributes)
         {
             switch(type)
             {
                 case "TotalBet":
                     return TotalBetStrategy.Instance;
+                case "LineBetTotal":
+                    // expects properties "ratioNumerator" and "ratioDenominator" to be present in the attributes dictionary
+                    if (!TryGetInt(attributes, "ratioNumerator", out int num) || 
+                        !TryGetInt(attributes, "ratioDenominator", out int denom) ||
+                        denom == 0)
+                    {
+                        sLog.WarnFormat("LineBetTotal strategy requires 'ratioNumerator' and non-zero 'ratioDenominator' attributes.");
+                        return null;
+                    }
+                    return new LineBetTotalStrategy(num, denom);
+                case "LineBetFromStaticMultiplier":
+                    // Self-documenting, game-constant form: base = total_bet * numLines / staticBetMultiplier.
+                    // Assumes both are fixed for the game (see LineBetTotalStrategy); not for variable-line games.
+                    if (!TryGetInt(attributes, "numLines", out int lines) ||
+                        !TryGetInt(attributes, "staticBetMultiplier", out int staticMult) ||
+                        staticMult == 0)
+                    {
+                        sLog.WarnFormat("LineBetFromStaticMultiplier strategy requires 'numLines' and non-zero 'staticBetMultiplier' attributes.");
+                        return null;
+                    }
+                    return new LineBetTotalStrategy(lines, staticMult);
                 default:
                     return null;
             }
