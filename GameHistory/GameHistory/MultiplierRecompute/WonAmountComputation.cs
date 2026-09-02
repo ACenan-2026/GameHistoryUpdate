@@ -18,17 +18,17 @@ namespace GameHistory.MultiplierRecompute
             if (slot == null) return results;
 
             var mapping = _configParser.GetMultiplierParams();
-            var baseCache = new Dictionary<string, decimal?>();   // strategyType -> base, computed once
+            var baseCache = new Dictionary<StrategySpec, decimal?>();   // strategyType -> base, computed once
 
             foreach (var entry in mapping.Mappings)
             {
                 var p = entry.Value;
 
-                var strategy = MultiplierBaseStrategyResolver.Resolve(p.StrategyType);
-                if (strategy == null) { sLog.WarnFormat("No strategy '{0}' for symbol '{1}'.", p.StrategyType, entry.Key); continue; }
+                var strategy = MultiplierBaseStrategyResolver.Resolve(p.Strategy?.Type, p.Strategy?.Attributes);
+                if (strategy == null) { sLog.WarnFormat("No strategy '{0}' for symbol '{1}'.", p.Strategy?.Type, entry.Key); continue; }
 
-                if (!baseCache.TryGetValue(p.StrategyType, out var baseVal))
-                    baseCache[p.StrategyType] = baseVal = strategy.GetBase(slot);
+                if (!baseCache.TryGetValue(p.Strategy, out var baseVal))
+                    baseCache[p.Strategy] = baseVal = strategy.GetBase(slot);
 
                 if (baseVal == null) continue;        // base unknown -> no overlay for this symbol
                 results[entry.Key] = baseVal.Value * p.Multiplier;
