@@ -225,9 +225,7 @@ namespace GameHistory.Controllers
                     TypeNameHandling = TypeNameHandling.All,
                     TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple
                 });
-                
-                Console.WriteLine("Anujan - GameHistoryDetailsResponse data is : ");
-                    Console.WriteLine(data);
+
 
                 // Current game is not completed
                 if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
