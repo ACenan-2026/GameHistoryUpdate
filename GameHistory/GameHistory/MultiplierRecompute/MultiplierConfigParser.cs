@@ -2,25 +2,43 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using System;
 
 namespace GameHistory.MultiplierRecompute
 {
+
+    /// <summary>
+    /// Encapsulates the strategy-based parameters needed to compute the base value for a multiplier symbol.
+    /// </summary>
+    public sealed class StrategySpec
+    {
+        public string Type { get;  }
+        public IReadOnlyDictionary<string, string> Attributes { get; }
+
+        public StrategySpec(string type, IReadOnlyDictionary<string, string> attributes)
+        {
+            Type = type;
+            Attributes = attributes;
+        }
+    }
+
+
     /// <summary>
     /// Represents the parameters associated with a multiplier symbol, including its multiplier value, 
     /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
     /// All of these fields are set via an XML configuration file and are immutable once the object is created.
     /// </summary>
-    public class MultiplierParams
+    public sealed class MultiplierParams
     {
         public int Multiplier {  get; }
-        public string StrategyType { get;  }
+        public StrategySpec Strategy { get; }
         public bool Paid { get; }
 
-        public MultiplierParams(int multiplier, string strategyType, bool paid)
+        public MultiplierParams(int multiplier, bool paid, StrategySpec strategy)
         {
             Multiplier = multiplier;
-            StrategyType = strategyType;
             Paid = paid;
+            Strategy = strategy;
         }
 
     } 
@@ -84,8 +102,16 @@ namespace GameHistory.MultiplierRecompute
 
             foreach (var groupElement in groups)
             {
+
                 string groupName = groupElement.Attribute("name")?.Value ?? "(unnamed)";
+
+                // creating a dictionary out of the current groupElement's attributes 
                 string strategy = groupElement.Attribute("strategy")?.Value;
+
+                var attrs = groupElement.Attributes()
+                        .ToDictionary(a => a.Name.LocalName, a => a.Value, StringComparer.OrdinalIgnoreCase);
+                var spec = new StrategySpec(strategy, attrs);
+
                 if (string.IsNullOrEmpty(strategy))
                 {
                     sLog.WarnFormat("Multiplier group '{0}' has no strategy; its symbols will not resolve a base value.", groupName);
@@ -102,7 +128,7 @@ namespace GameHistory.MultiplierRecompute
                     int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1;
                     bool paid = bool.TryParse(symbolElement.Attribute("paid")?.Value, out var p) && p;
 
-                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, strategy, paid)))
+                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, paid, spec)))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
                     }
