@@ -115,4 +115,7 @@ nunit-*.xml
 # Visual Studio
 .vs/
 
+# Publishing Profiles
+*.pubxml.user
+
 
