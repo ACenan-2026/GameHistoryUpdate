@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Game History multiplier config for LaughingDragon.
+
+  RUNTIME LOCATION: copy this file to
+    C:\inetpub\wwwroot\GameConfig\LaughingDragon\LaughingDragon_history.xml
+  (this copy lives in the source tree only as a reference / example.)
+
+  Symbol names are the GRID codes as they appear in SlotUserPositionDict.Positions
+  (uppercase, zero-padded), NOT the (lowercase) image filenames. Matching is
+  case-sensitive, so use the exact grid casing.
+
+  Convention for this game:
+    B<int>  = paid multiplier       (paid="true")
+    TB<int> = present but not paid   (paid="false")
+    value   = the multiplier factor  (B10 -> 10)
+
+  Strategy: TotalBet -> base = total bet. Sanity check from a real round:
+    Bet = 20, B01 -> 20x1 = 20, B10 -> 20x10 = 200 (matches recorded located-scatter wins).
+-->
+<GameHistoryConfig gameName="LaughingDragon">
+  <multiplierGroups>
+    <group name="LocatedScatter" strategy="TotalBet">
+      <!-- Paid multipliers -->
+      <symbol name="B01"  value="1"   paid="true" />
+      <symbol name="B02"  value="2"   paid="true" />
+      <symbol name="B03"  value="3"   paid="true" />
+      <symbol name="B05"  value="5"   paid="true" />
+      <symbol name="B10"  value="10"  paid="true" />
+      <symbol name="B12"  value="12"  paid="true" />
+      <symbol name="B15"  value="15"  paid="true" />
+      <symbol name="B20"  value="20"  paid="true" />
+      <symbol name="B25"  value="25"  paid="true" />
+      <symbol name="B50"  value="50"  paid="true" />
+      <symbol name="B100" value="100" paid="true" />
+
+      <!-- Present but not paid -->
+      <symbol name="TB01"  value="1"   paid="false" />
+      <symbol name="TB02"  value="2"   paid="false" />
+      <symbol name="TB03"  value="3"   paid="false" />
+      <symbol name="TB05"  value="5"   paid="false" />
+      <symbol name="TB10"  value="10"  paid="false" />
+      <symbol name="TB12"  value="12"  paid="false" />
+      <symbol name="TB15"  value="15"  paid="false" />
+      <symbol name="TB20"  value="20"  paid="false" />
+      <symbol name="TB25"  value="25"  paid="false" />
+      <symbol name="TB50"  value="50"  paid="false" />
+      <symbol name="TB100" value="100" paid="false" />
+      <symbol name="TB150" value="150" paid="false" />
+      <symbol name="TB200" value="200" paid="false" />
+    </group>
+  </multiplierGroups>
+</GameHistoryConfig>

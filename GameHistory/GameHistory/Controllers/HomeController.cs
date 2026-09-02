@@ -11,6 +11,7 @@ using System.Net;
 using GameHistory.Helpers;
 using System.IO;
 using GameHistory.Models;
+using GameHistory.MultiplierRecompute;
 using System.Runtime.Serialization.Formatters;
 using System.Web.Script.Serialization;
 using System.Globalization;
@@ -224,9 +225,7 @@ namespace GameHistory.Controllers
                     TypeNameHandling = TypeNameHandling.All,
                     TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple
                 });
-                
-                Console.WriteLine("Anujan - GameHistoryDetailsResponse data is : ");
-                    Console.WriteLine(data);
+
 
                 // Current game is not completed
                 if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
@@ -242,6 +241,9 @@ namespace GameHistory.Controllers
                 if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel != null && data.GameHistoryDetailsMember.UserPositions.SlotUsersPositionsAndDetails != null)
                 {
                     data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.Symbols = getSymbols(data.GameHistoryDetailsMember);
+
+                    // Phase 1: multiplier recompute validation (log-only; never alters the rendered output).
+                    RunMultiplierValidation(data.GameHistoryDetailsMember);
 
                     #region Replace symbol names with symbol images
                     int counter = 0;
@@ -486,6 +488,68 @@ namespace GameHistory.Controllers
             return null;
         }
 
+
+        /// <summary>
+        /// Phase 1 of the multiplier-recompute feature: LOG-ONLY validation. Resolves this game's history config
+        /// (wwwroot\GameConfig\<GameName>\<GameName>_history.xml), computes the finalised multiplier amounts,
+        /// and cross-checks them against the recorded located-scatter wins, logging any divergence. It never changes
+        /// the rendered output and is wrapped so any failure is non-fatal to the history page. Gated by the
+        /// "MultiplierRecompute.Enabled" appSetting (off unless explicitly set to true).
+        /// </summary>
+        private void RunMultiplierValidation(GameHistoryGameInfoModel member)
+        {
+            try
+            {
+                bool enabled;
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.Enabled"], out enabled);
+                if (!enabled)
+                {
+                    return;
+                }
+
+                string gameName = member?.GameHistoryGameInfoSlotModel?.GameName;
+                if (string.IsNullOrEmpty(gameName))
+                {
+                    return;
+                }
+
+                // GameConfig sits as a sibling of the app: wwwroot\GameConfig\<GameName>\<GameName>_history.xml
+                string appRoot = Server.MapPath("~");                       // ...\wwwroot\GameHistory
+                string wwwroot = Directory.GetParent(appRoot)?.FullName;    // ...\wwwroot
+                if (wwwroot == null)
+                {
+                    return;
+                }
+                string configPath = Path.Combine(wwwroot, "GameConfig", gameName, gameName + "_history.xml");
+                if (!System.IO.File.Exists(configPath))
+                {
+                    if (sLog.IsDebugEnabled)
+                    {
+                        sLog.DebugFormat("No multiplier config for game '{0}' at {1}; skipping validation.", gameName, configPath);
+                    }
+                    return;
+                }
+
+                IMultiplierConfigParser parser = new MultiplierConfigParser(configPath);
+                MultiplierSymbolMapping mapping = parser.GetMultiplierParams();
+                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(member);
+
+                if (sLog.IsDebugEnabled)
+                {
+                    foreach (var kv in computed)
+                    {
+                        sLog.DebugFormat("Computed multiplier {0} -> {1} for game '{2}'.", kv.Key, kv.Value, gameName);
+                    }
+                }
+
+                new MultiplierComputationValidator().ValidateRound(member, mapping, computed);
+            }
+            catch (Exception ex)
+            {
+                // Validation must never take down the history page.
+                sLog.ErrorFormat("Multiplier validation failed (non-fatal): {0}", ex);
+            }
+        }
 
         private SlotSymbolTableViewModel[] getSymbols(GameHistoryGameInfoModel gameInfoModel)
         {

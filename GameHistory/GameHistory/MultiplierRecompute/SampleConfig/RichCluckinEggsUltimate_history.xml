@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Game History multiplier config for RichCluckinEggsUltimate.
+
+  Strategy: LineBetFromStaticMultiplier
+    base = total_bet * numLines / staticBetMultiplier
+    e.g. 7.50 * 50 / 75 = 5.00  ->  B01 -> 5.00, B05 -> 25.00 (matches recorded located-scatter wins).
+
+  These are the game's fixed constants:
+    numLines            = 50   (paylines, constant for this game)
+    staticBetMultiplier = 75   (total_bet = bet_per_line * 75)
+  Only valid while both are constant per spin — do not use this strategy for a variable-line game.
+
+  Symbol names are the GRID codes from SlotUserPositionDict.Positions (uppercase, zero-padded),
+  NOT the (lowercase) image filenames. Matching is case-sensitive.
+  All located-scatter multipliers in this game are paid (there is no TB / unpaid variant).
+  Wd wild multipliers exist but fold into payline wins, so they are not listed here (Phase 1
+  does not validate them).
+
+  RUNTIME LOCATION: copy this file to
+    C:\inetpub\wwwroot\GameConfig\RichCluckinEggsUltimate\RichCluckinEggsUltimate_history.xml
+-->
+<GameHistoryConfig gameName="RichCluckinEggsUltimate">
+  <multiplierGroups>
+    <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="50" staticBetMultiplier="75">
+      <symbol name="B01"  value="1"   paid="true" />
+      <symbol name="B02"  value="2"   paid="true" />
+      <symbol name="B03"  value="3"   paid="true" />
+      <symbol name="B05"  value="5"   paid="true" />
+      <symbol name="B10"  value="10"  paid="true" />
+      <symbol name="B25"  value="25"  paid="true" />
+      <symbol name="B50"  value="50"  paid="true" />
+      <symbol name="B100" value="100" paid="true" />
+    </group>
+  </multiplierGroups>
+</GameHistoryConfig>
