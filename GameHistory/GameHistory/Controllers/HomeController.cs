@@ -523,8 +523,7 @@ namespace GameHistory.Controllers
         {
             try
             {
-                bool enabled;
-                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.Enabled"], out enabled);
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.Enabled"], out bool enabled);
                 if (!enabled)
                 {
                     return null;
@@ -557,6 +556,8 @@ namespace GameHistory.Controllers
 
                 IMultiplierConfigParser parser = new MultiplierConfigParser(configPath);
                 MultiplierSymbolMapping mapping = parser.GetMultiplierParams();
+                
+                // maps multiplier name to finalised amount
                 IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(member);
 
                 if (sLog.IsDebugEnabled)
@@ -570,8 +571,7 @@ namespace GameHistory.Controllers
                 // Phase 1 validation stays log-only; it never alters what the loop below renders.
                 new MultiplierComputationValidator().ValidateRound(member, mapping, computed);
 
-                bool includeUnpaid;
-                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.OverlayIncludesUnpaid"], out includeUnpaid);
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.OverlayIncludesUnpaid"], out bool includeUnpaid);
 
                 return new MultiplierOverlayContext
                 {
