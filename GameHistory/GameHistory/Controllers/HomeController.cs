@@ -242,8 +242,10 @@ namespace GameHistory.Controllers
                 {
                     data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.Symbols = getSymbols(data.GameHistoryDetailsMember);
 
-                    // Phase 1: multiplier recompute validation (log-only; never alters the rendered output).
-                    RunMultiplierValidation(data.GameHistoryDetailsMember);
+                    // Multiplier recompute: compute the finalised amounts (and run the log-only validation). The
+                    // returned context drives the amount overlay in the tile loop below; null => render plain symbols.
+                    string gameName = data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.GameName;
+                    MultiplierOverlayContext multiplierCtx = PrepareMultiplierData(data.GameHistoryDetailsMember);
 
                     #region Replace symbol names with symbol images
                     int counter = 0;
@@ -265,7 +267,10 @@ namespace GameHistory.Controllers
                                 {
                                     html += "<tr margin=\"2px 2px 2px 2px\">";
                                     // Figuring out where the symbol images are stored based on the platform type sent from client
-                                    html += "<img src=\"" + Url.Content(floorItem.SymbolName.ToSlotSymbolUrl(data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.GameName, platformType) + "\" >");
+                                    string symbolUrl = Url.Content(floorItem.SymbolName.ToSlotSymbolUrl(gameName, platformType));
+                                    // For a configured multiplier symbol the finalised amount is overlaid on the tile;
+                                    // every other symbol renders exactly as before.
+                                    html += BuildMultiplierTile(symbolUrl, floorItem.SymbolName, multiplierCtx);
                                     html += "</tr>";
                                     html += "<br/>";
                                 }
@@ -490,48 +495,69 @@ namespace GameHistory.Controllers
 
 
         /// <summary>
-        /// Phase 1 of the multiplier-recompute feature: LOG-ONLY validation. Resolves this game's history config
-        /// (wwwroot\GameConfig\<GameName>\<GameName>_history.xml), computes the finalised multiplier amounts,
-        /// and cross-checks them against the recorded located-scatter wins, logging any divergence. It never changes
-        /// the rendered output and is wrapped so any failure is non-fatal to the history page. Gated by the
-        /// "MultiplierRecompute.Enabled" appSetting (off unless explicitly set to true).
+        /// Holds everything the render loop needs to overlay finalised multiplier amounts onto the outcome tiles:
+        /// the symbol -> params mapping (for the paid flag) and the symbol -> computed_amount map. Also carries
+        /// whether unpaid (TB) multipliers should be overlaid. Produced once per game round by
+        /// <see cref="PrepareMultiplierData"/>; null means "render the plain symbols as before".
         /// </summary>
-        private void RunMultiplierValidation(GameHistoryGameInfoModel member)
+        private sealed class MultiplierOverlayContext
+        {
+            public bool IncludeUnpaid { get; set; }
+            public MultiplierSymbolMapping Mapping { get; set; }
+            public IReadOnlyDictionary<string, decimal> Computed { get; set; }
+        }
+
+        /// <summary>
+        /// Multiplier-recompute feature entry point for the details view. Resolves this game's history config
+        /// (wwwroot\GameConfig\<GameName>\<GameName>_history.xml), computes the finalised multiplier amounts,
+        /// runs the LOG-ONLY Phase 1 validation (cross-checks computed vs. recorded located-scatter wins and logs
+        /// any divergence), and returns a context the render loop uses to overlay those amounts onto the outcome
+        /// tiles. Wrapped so any failure is non-fatal to the history page: on error/disabled/no-config it returns
+        /// null and the tiles render exactly as before.
+        ///
+        /// Gated by the "MultiplierRecompute.Enabled" appSetting (off unless explicitly set to true).
+        /// Overlay scope is controlled by "MultiplierRecompute.OverlayIncludesUnpaid": false (default) overlays
+        /// only paid (B) located-scatter multipliers; true also overlays unpaid (TB) ones.
+        /// </summary>
+        private MultiplierOverlayContext PrepareMultiplierData(GameHistoryGameInfoModel member)
         {
             try
             {
-                bool enabled;
-                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.Enabled"], out enabled);
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.Enabled"], out bool enabled);
                 if (!enabled)
                 {
-                    return;
+                    return null;
                 }
 
                 string gameName = member?.GameHistoryGameInfoSlotModel?.GameName;
                 if (string.IsNullOrEmpty(gameName))
                 {
-                    return;
+                    return null;
                 }
 
-                // GameConfig sits as a sibling of the app: wwwroot\GameConfig\<GameName>\<GameName>_history.xml
-                string appRoot = Server.MapPath("~");                       // ...\wwwroot\GameHistory
-                string wwwroot = Directory.GetParent(appRoot)?.FullName;    // ...\wwwroot
-                if (wwwroot == null)
+                // Resolve the GameConfig root. Prefer the explicit "MultiplierRecompute.GameConfigRoot" appSetting
+                // (an absolute path, or an app-relative "~/..." path) so it works whether the app runs from the
+                // deployed wwwroot copy or straight from the source project. If unset, fall back to the historical
+                // assumption that GameConfig is a sibling of the app root (...\wwwroot\GameConfig for ...\wwwroot\GameHistory).
+                string gameConfigRoot = ResolveGameConfigRoot();
+                if (gameConfigRoot == null)
                 {
-                    return;
+                    return null;
                 }
-                string configPath = Path.Combine(wwwroot, "GameConfig", gameName, gameName + "_history.xml");
+                string configPath = Path.Combine(gameConfigRoot, gameName, gameName + "_history.xml");
                 if (!System.IO.File.Exists(configPath))
                 {
                     if (sLog.IsDebugEnabled)
                     {
-                        sLog.DebugFormat("No multiplier config for game '{0}' at {1}; skipping validation.", gameName, configPath);
+                        sLog.DebugFormat("No multiplier config for game '{0}' at {1}; skipping overlay/validation.", gameName, configPath);
                     }
-                    return;
+                    return null;
                 }
 
                 IMultiplierConfigParser parser = new MultiplierConfigParser(configPath);
                 MultiplierSymbolMapping mapping = parser.GetMultiplierParams();
+                
+                // maps multiplier name to finalised amount
                 IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(member);
 
                 if (sLog.IsDebugEnabled)
@@ -542,13 +568,90 @@ namespace GameHistory.Controllers
                     }
                 }
 
+                // Phase 1 validation stays log-only; it never alters what the loop below renders.
                 new MultiplierComputationValidator().ValidateRound(member, mapping, computed);
+
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.OverlayIncludesUnpaid"], out bool includeUnpaid);
+
+                return new MultiplierOverlayContext
+                {
+                    IncludeUnpaid = includeUnpaid,
+                    Mapping = mapping,
+                    Computed = computed
+                };
             }
             catch (Exception ex)
             {
-                // Validation must never take down the history page.
-                sLog.ErrorFormat("Multiplier validation failed (non-fatal): {0}", ex);
+                // The multiplier feature must never take down the history page; degrade to plain symbols.
+                sLog.ErrorFormat("Multiplier overlay/validation failed (non-fatal): {0}", ex);
+                return null;
             }
+        }
+
+        /// <summary>
+        /// Resolves the absolute folder that contains the per-game history configs
+        /// (<root></root><GameName></GameName><GameName></GameName>_history.xml). Order of preference:
+        ///  1. The "MultiplierRecompute.GameConfigRoot" appSetting — an absolute path (e.g. C:\inetpub\wwwroot\GameConfig)
+        ///     or an app-relative "~/..." path (resolved via Server.MapPath). Use this whenever the app does not run
+        ///     from the deployed wwwroot copy (e.g. IIS Express / VS debugging against the source project).
+        ///  2. Fallback: GameConfig as a sibling of the app root (works for the deployed ...\wwwroot\GameHistory app).
+        /// Returns null if neither can be resolved.
+        /// </summary>
+        private string ResolveGameConfigRoot()
+        {
+            string configured = ConfigurationManager.AppSettings["MultiplierRecompute.GameConfigRoot"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                configured = configured.Trim();
+                // Allow an app-relative path, though GameConfig normally lives outside the app.
+                return configured.StartsWith("~") ? Server.MapPath(configured) : configured;
+            }
+
+            string appRoot = Server.MapPath("~");                       // ...\wwwroot\GameHistory (when deployed)
+            string parent = Directory.GetParent(appRoot)?.FullName;     // ...\wwwroot
+            return parent == null ? null : Path.Combine(parent, "GameConfig");
+        }
+
+        /// <summary>
+        /// Builds the HTML for a single outcome tile. For a configured multiplier symbol that is in scope
+        /// (paid, or unpaid when OverlayIncludesUnpaid is set) and has a computed amount, the finalised amount is
+        /// overlaid on top of the symbol artwork; otherwise the plain symbol image is returned unchanged.
+        /// <paramref name="symbolUrl"/> must already be resolved via Url.Content.
+        /// </summary>
+        private static string BuildMultiplierTile(string symbolUrl, string symbolName, MultiplierOverlayContext ctx)
+        {
+            MultiplierParams p;
+            // Fallback in case the symbol is not in the mapping or has no computed amount: render the plain symbol image.
+            decimal amount;
+            if (ctx == null
+                || string.IsNullOrEmpty(symbolName)
+                || !ctx.Mapping.TryGet(symbolName, out p)
+                || (!p.Paid && !ctx.IncludeUnpaid)
+                || !ctx.Computed.TryGetValue(symbolName, out amount))
+            {
+                return "<img src=\"" + symbolUrl + "\" >";
+            }
+
+            string text = HttpUtility.HtmlEncode(FormatOverlayAmount(amount));
+            var sb = new StringBuilder();
+            sb.Append("<span style=\"position:relative; display:inline-block; line-height:0;\">");
+            sb.Append("<img src=\"").Append(symbolUrl).Append("\" >");
+            sb.Append("<span style=\"position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); ")
+              .Append("font-family:Arial,Helvetica,sans-serif; font-weight:bold; font-size:18px; ")
+              .Append("color:#FFFFFF; text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000; ")
+              .Append("white-space:nowrap; pointer-events:none;\">");
+            sb.Append(text);
+            sb.Append("</span></span>");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Formats a finalised multiplier amount for display on a tile: no currency symbol, trailing zeros trimmed
+        /// (e.g. 200, 25, 5.5), invariant culture for a stable decimal point.
+        /// </summary>
+        private static string FormatOverlayAmount(decimal amount)
+        {
+            return amount.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         private SlotSymbolTableViewModel[] getSymbols(GameHistoryGameInfoModel gameInfoModel)
