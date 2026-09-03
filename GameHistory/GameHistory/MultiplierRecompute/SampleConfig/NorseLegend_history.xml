@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Game History multiplier config for NorseLegend.
+
+  Strategy: TotalBet -> base = total bet (confirmed).
+
+  Symbol rule: a located-scatter multiplier is  <int1>xb<int2>  where BOTH numbers apply to the
+  scatter multiplier:
+     scatter value = int1 * int2        (finalised = base * int1 * int2)
+     int1 = the prefix multiplier (1 when there is no prefix, i.e. plain b<int2>)
+     int2 = the number after 'b'
+  So b10 = 10, 2xb10 = 20, 3xb10 = 30, 5xb10 = 50.
+  A leading "T" marks the unpaid variant (paid="false").
+
+  Excluded on purpose:
+     split / 1xsplit / tsplit …   -> awards an additional free game, not a multiplier
+     <int>x<char><char>  (2xag …) -> regular symbols, not multipliers
+     3x<char><char>r     (3xagr …)-> payline multipliers on regular symbols, ignored for now
+
+  NOTE: symbol names must match the grid codes in SlotUserPositionDict.Positions (case-sensitive).
+  Plain codes use the proven uppercase form (B01); the prefixed codes (2xB01 …) are inferred — if a
+  real spin shows they don't match, adjust the casing/format (or make the lookup case-insensitive).
+
+  RUNTIME LOCATION: copy to  C:\inetpub\wwwroot\GameConfig\NorseLegend\NorseLegend_history.xml
+-->
+<GameHistoryConfig gameName="NorseLegend">
+  <multiplierGroups>
+    <group name="LocatedScatter" strategy="TotalBet">
+
+      <!-- value = int1 * int2  (prefix * number-after-b) -->
+
+      <!-- Paid, no prefix (int1 = 1) -->
+      <symbol name="B01" value="1"  paid="true" /><symbol name="B02" value="2"  paid="true" />
+      <symbol name="B03" value="3"  paid="true" /><symbol name="B05" value="5"  paid="true" />
+      <symbol name="B10" value="10" paid="true" /><symbol name="B12" value="12" paid="true" />
+      <symbol name="B15" value="15" paid="true" /><symbol name="B20" value="20" paid="true" />
+
+      <!-- Paid, 2x -->
+      <symbol name="2xB01" value="2"  paid="true" /><symbol name="2xB02" value="4"  paid="true" />
+      <symbol name="2xB03" value="6"  paid="true" /><symbol name="2xB05" value="10" paid="true" />
+      <symbol name="2xB10" value="20" paid="true" /><symbol name="2xB12" value="24" paid="true" />
+      <symbol name="2xB15" value="30" paid="true" /><symbol name="2xB20" value="40" paid="true" />
+
+      <!-- Paid, 3x -->
+      <symbol name="3xB01" value="3"  paid="true" /><symbol name="3xB02" value="6"  paid="true" />
+      <symbol name="3xB03" value="9"  paid="true" /><symbol name="3xB05" value="15" paid="true" />
+      <symbol name="3xB10" value="30" paid="true" /><symbol name="3xB12" value="36" paid="true" />
+      <symbol name="3xB15" value="45" paid="true" /><symbol name="3xB20" value="60" paid="true" />
+
+      <!-- Paid, 5x -->
+      <symbol name="5xB01" value="5"   paid="true" /><symbol name="5xB02" value="10"  paid="true" />
+      <symbol name="5xB03" value="15"  paid="true" /><symbol name="5xB05" value="25"  paid="true" />
+      <symbol name="5xB10" value="50"  paid="true" /><symbol name="5xB12" value="60"  paid="true" />
+      <symbol name="5xB15" value="75"  paid="true" /><symbol name="5xB20" value="100" paid="true" />
+
+      <!-- Unpaid (leading T), no prefix -->
+      <symbol name="TB01" value="1"  paid="false" /><symbol name="TB02" value="2"  paid="false" />
+      <symbol name="TB03" value="3"  paid="false" /><symbol name="TB05" value="5"  paid="false" />
+      <symbol name="TB10" value="10" paid="false" /><symbol name="TB12" value="12" paid="false" />
+      <symbol name="TB15" value="15" paid="false" /><symbol name="TB20" value="20" paid="false" />
+
+      <!-- Unpaid, 2x -->
+      <symbol name="T2xB01" value="2"  paid="false" /><symbol name="T2xB02" value="4"  paid="false" />
+      <symbol name="T2xB03" value="6"  paid="false" /><symbol name="T2xB05" value="10" paid="false" />
+      <symbol name="T2xB10" value="20" paid="false" /><symbol name="T2xB12" value="24" paid="false" />
+      <symbol name="T2xB15" value="30" paid="false" /><symbol name="T2xB20" value="40" paid="false" />
+
+      <!-- Unpaid, 3x -->
+      <symbol name="T3xB01" value="3"  paid="false" /><symbol name="T3xB02" value="6"  paid="false" />
+      <symbol name="T3xB03" value="9"  paid="false" /><symbol name="T3xB05" value="15" paid="false" />
+      <symbol name="T3xB10" value="30" paid="false" /><symbol name="T3xB12" value="36" paid="false" />
+      <symbol name="T3xB15" value="45" paid="false" /><symbol name="T3xB20" value="60" paid="false" />
+
+      <!-- Unpaid, 5x -->
+      <symbol name="T5xB01" value="5"   paid="false" /><symbol name="T5xB02" value="10"  paid="false" />
+      <symbol name="T5xB03" value="15"  paid="false" /><symbol name="T5xB05" value="25"  paid="false" />
+      <symbol name="T5xB10" value="50"  paid="false" /><symbol name="T5xB12" value="60"  paid="false" />
+      <symbol name="T5xB15" value="75"  paid="false" /><symbol name="T5xB20" value="100" paid="false" />
+
+    </group>
+  </multiplierGroups>
+</GameHistoryConfig>
