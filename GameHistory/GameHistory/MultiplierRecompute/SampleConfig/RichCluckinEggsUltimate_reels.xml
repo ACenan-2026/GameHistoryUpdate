@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AgtReelConfig gameName="RichCluckinEggsUltimate">
+  <agtReels>
+    <agtReel name="reel01_high1" row="0" column="0" />
+    <agtReel name="reel01_low1" row="0" column="0" />
+    <agtReel name="reel02_high1" row="0" column="1" />
+    <agtReel name="reel02_low1" row="0" column="1" />
+    <agtReel name="reel03_high1" row="0" column="2" />
+    <agtReel name="reel03_low1" row="0" column="2" />
+    <agtReel name="reel04_high1" row="0" column="3" />
+    <agtReel name="reel04_low1" row="0" column="3" />
+    <agtReel name="reel05_high1" row="0" column="4" />
+    <agtReel name="reel05_low1" row="0" column="4" />
+    <agtReel name="reel01f" row="0" column="0" />
+    <agtReel name="reel02f" row="0" column="1" />
+    <agtReel name="reel03f" row="0" column="2" />
+    <agtReel name="reel04f" row="0" column="3" />
+    <agtReel name="reel05f" row="0" column="4" />
+    <agtReel name="reel06fa_feature" row="0" column="5" />
+  </agtReels>
+  <symbols>
+    <string>p6</string>
+    <string>p4</string>
+    <string>p3</string>
+    <string>p2</string>
+    <string>sc</string>
+    <string>p1</string>
+    <string>p5</string>
+    <string>wd</string>
+    <string>jk</string>
+    <string>ae</string>
+    <string>tn</string>
+    <string>qn</string>
+    <string>kg</string>
+    <string>miss</string>
+    <string>wild</string>
+    <string>nowin</string>
+    <string>p6f</string>
+    <string>p4f</string>
+    <string>p3f</string>
+    <string>p2f</string>
+    <string>p1f</string>
+    <string>p5f</string>
+    <string>b01</string>
+    <string>b02</string>
+    <string>b03</string>
+    <string>b05</string>
+    <string>b10</string>
+    <string>b25</string>
+    <string>b50</string>
+    <string>fg</string>
+    <string>jkf</string>
+    <string>aef</string>
+    <string>tnf</string>
+    <string>qnf</string>
+    <string>kgf</string>
+    <string>f4</string>
+    <string>f3</string>
+    <string>f2</string>
+    <string>f1</string>
+    <string>wd2</string>
+    <string>wd3</string>
+    <string>wd5</string>
+    <string>b75</string>
+    <string>maxi</string>
+    <string>grand</string>
+    <string>dummy</string>
+    <string>b08</string>
+    <string>mini</string>
+  </symbols>
+	<GameHistoryConfig gameName="RichCluckinEggsUltimate">
+		<multiplierGroups>
+			<group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="50" staticBetMultiplier="75">
+				<symbol name="B01" value="1" paid="true"/>
+				<symbol name="B02" value="2" paid="true"/>
+				<symbol name="B03" value="3" paid="true"/>
+				<symbol name="B05" value="5" paid="true"/>
+				<symbol name="B08" value="8" paid="true"/>
+				<symbol name="B10" value="10" paid="true"/>
+				<symbol name="B25" value="25" paid="true"/>
+				<symbol name="B50" value="50" paid="true"/>
+				<symbol name="B100" value="100" paid="true"/>
+			</group>
+		</multiplierGroups>
+	</GameHistoryConfig>
+</AgtReelConfig>
