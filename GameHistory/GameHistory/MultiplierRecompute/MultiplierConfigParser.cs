@@ -100,7 +100,7 @@ namespace GameHistory.MultiplierRecompute
         {
             var multiplierMap = new MultiplierSymbolMapping();
 
-            var groups = doc.Root?.Element("multiplierGroups")?.Elements("group")
+            var groups = doc.Root?.Element("GameHistoryConfig")?.Element("multiplierGroups")?.Elements("group")
                          ?? Enumerable.Empty<XElement>();
 
             foreach (var groupElement in groups)
