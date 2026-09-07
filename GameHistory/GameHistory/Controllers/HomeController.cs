@@ -509,7 +509,7 @@ namespace GameHistory.Controllers
 
         /// <summary>
         /// Multiplier-recompute feature entry point for the details view. Resolves this game's history config
-        /// (wwwroot\GameConfig\<GameName>\<GameName>_history.xml), computes the finalised multiplier amounts,
+        /// (wwwroot\GameConfig\<GameName>\ <GameName>_reels.xml), computes the finalised multiplier amounts,
         /// runs the LOG-ONLY Phase 1 validation (cross-checks computed vs. recorded located-scatter wins and logs
         /// any divergence), and returns a context the render loop uses to overlay those amounts onto the outcome
         /// tiles. Wrapped so any failure is non-fatal to the history page: on error/disabled/no-config it returns
@@ -544,7 +544,7 @@ namespace GameHistory.Controllers
                 {
                     return null;
                 }
-                string configPath = Path.Combine(gameConfigRoot, gameName, gameName + "_history.xml");
+                string configPath = Path.Combine(gameConfigRoot, gameName, gameName + "_reels.xml");
                 if (!System.IO.File.Exists(configPath))
                 {
                     if (sLog.IsDebugEnabled)
@@ -590,7 +590,7 @@ namespace GameHistory.Controllers
 
         /// <summary>
         /// Resolves the absolute folder that contains the per-game history configs
-        /// (<root></root><GameName></GameName><GameName></GameName>_history.xml). Order of preference:
+        /// (<root></root><GameName></GameName><GameName></GameName>_reels.xml). Order of preference:
         ///  1. The "MultiplierRecompute.GameConfigRoot" appSetting — an absolute path (e.g. C:\inetpub\wwwroot\GameConfig)
         ///     or an app-relative "~/..." path (resolved via Server.MapPath). Use this whenever the app does not run
         ///     from the deployed wwwroot copy (e.g. IIS Express / VS debugging against the source project).
