@@ -71,6 +71,15 @@ namespace GameHistory.MultiplierRecompute
 
     public interface IMultiplierConfigParser
     {
+        /// <summary>
+        /// Parses the multiplier configuration XML and returns a mapping of symbols to their corresponding multiplier parameters.
+        /// Returns a MultiplierSymbolMapping object containing the mappings currently detailing the multiplier value, strategy type, 
+        /// and whether the symbol is paid or not.
+        /// If the XML structure is invalid or missing required attributes, those entries will be skipped.
+        /// 
+        /// Consider reading the corresponding documentation to understand the expected XML schema and attributes for proper configuration.
+        /// </summary>
+        /// <returns><see cref="MultiplierSymbolMapping"/>MultiplierSymbolMapping</returns>
         MultiplierSymbolMapping GetMultiplierParams();
     }
 
@@ -87,15 +96,7 @@ namespace GameHistory.MultiplierRecompute
             doc = XDocument.Load(path);
         }
 
-        /// <summary>
-        /// Parses the multiplier configuration XML and returns a mapping of symbols to their corresponding multiplier parameters.
-        /// Returns a MultiplierSymbolMapping object containing the mappings currently detailing the multiplier value, strategy type, 
-        /// and whether the symbol is paid or not.
-        /// If the XML structure is invalid or missing required attributes, those entries will be skipped.
-        /// 
-        /// Consider reading the corresponding documentation to understand the expected XML schema and attributes for proper configuration.
-        /// </summary>
-        /// <returns></returns>
+
         public MultiplierSymbolMapping GetMultiplierParams()
         {
             var multiplierMap = new MultiplierSymbolMapping();
