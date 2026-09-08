@@ -556,7 +556,22 @@ namespace GameHistory.Controllers
 
                 IMultiplierConfigParser parser = new MultiplierConfigParser(configPath);
                 MultiplierSymbolMapping mapping = parser.GetMultiplierParams();
-                
+
+                // Early return when the config carries no multiplier symbols. This happens when the
+                // <GameName>_reels.xml has no GameHistoryConfig element (or an empty multiplierGroups):
+                // there is nothing to overlay, so the tiles must fall back to the original plain-symbol
+                // rendering. Returning null here makes that fallback explicit at the source, and also
+                // skips the log-only validator (which would otherwise WARN about every recorded
+                // located-scatter win having no computed match for a game that was never configured).
+                if (mapping == null || mapping.Mappings.Count == 0)
+                {
+                    if (sLog.IsDebugEnabled)
+                    {
+                        sLog.DebugFormat("Config for game '{0}' at {1} has no multiplier symbols (missing GameHistoryConfig/multiplierGroups); rendering plain symbols.", gameName, configPath);
+                    }
+                    return null;
+                }
+
                 // maps multiplier name to finalised amount
                 IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(member);
 
