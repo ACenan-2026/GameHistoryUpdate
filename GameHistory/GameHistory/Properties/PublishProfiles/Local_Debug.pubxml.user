@@ -6,7 +6,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
 <Project>
   <PropertyGroup>
     <_PublishTargetUrl>C:\inetpub\wwwroot\GameHistory</_PublishTargetUrl>
-    <History>True|2026-09-01T00:00:42.1748825Z||;</History>
+    <History>True|2026-09-07T22:49:43.5756562Z||;True|2026-09-01T10:00:42.1748825+10:00||;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
@@ -29,10 +29,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/27/2026 10:43:20</publishTime>
     </File>
     <File Include="bin/GameHistory.dll">
-      <publishTime>09/01/2026 10:00:40</publishTime>
+      <publishTime>09/08/2026 08:49:32</publishTime>
     </File>
     <File Include="bin/GameHistory.pdb">
-      <publishTime>09/01/2026 10:00:40</publishTime>
+      <publishTime>09/08/2026 08:49:32</publishTime>
     </File>
     <File Include="bin/jquery.min.js">
       <publishTime>02/16/2026 14:00:02</publishTime>
@@ -323,7 +323,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/27/2026 10:43:21</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>09/01/2026 10:00:41</publishTime>
+      <publishTime>09/08/2026 08:49:42</publishTime>
     </File>
   </ItemGroup>
 </Project>

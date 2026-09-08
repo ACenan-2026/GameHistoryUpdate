@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AgtReelConfig gameName="RedEclipseRiches">
+  <agtReels>
+    <agtReel name="reel1" row="0" column="0" />
+    <agtReel name="reel2" row="0" column="1" />
+    <agtReel name="reel2high" row="0" column="1" />
+    <agtReel name="reel3" row="0" column="2" />
+    <agtReel name="reel3high" row="0" column="2" />
+    <agtReel name="reel4" row="0" column="3" />
+    <agtReel name="reel4high" row="0" column="3" />
+    <agtReel name="reel5" row="0" column="4" />
+    <agtReel name="s_reel1" row="0" column="0" />
+    <agtReel name="reel01f" row="0" column="0" />
+    <agtReel name="s_reel2" row="0" column="1" />
+    <agtReel name="reel02f" row="0" column="1" />
+    <agtReel name="s_reel3" row="0" column="2" />
+    <agtReel name="reel03f" row="0" column="2" />
+    <agtReel name="s_reel4" row="0" column="3" />
+    <agtReel name="reel04f" row="0" column="3" />
+    <agtReel name="s_reel5" row="0" column="4" />
+    <agtReel name="reel05f" row="0" column="4" />
+  </agtReels>
+  <symbols>
+    <string>spl1</string>
+    <string>spl3</string>
+    <string>scspl</string>
+    <string>fspl</string>
+    <string>nowin</string>
+    <string>sc1sp1</string>
+    <string>spl2</string>
+    <string>p5</string>
+    <string>p3</string>
+    <string>p2</string>
+    <string>p1</string>
+    <string>p4</string>
+    <string>jk</string>
+    <string>tn</string>
+    <string>ne</string>
+    <string>ae</string>
+    <string>kg</string>
+    <string>qn</string>
+    <string>sc</string>
+    <string>scf1</string>
+    <string>scf2</string>
+    <string>scf3</string>
+    <string>fg</string>
+    <string>upf1</string>
+    <string>upf2</string>
+    <string>upf3</string>
+    <string>b01</string>
+    <string>b02</string>
+    <string>b03</string>
+    <string>b04</string>
+    <string>b05</string>
+    <string>b06</string>
+    <string>b08</string>
+    <string>b10</string>
+    <string>b12</string>
+    <string>b15</string>
+    <string>b18</string>
+    <string>b20</string>
+    <string>b22</string>
+    <string>b25</string>
+    <string>b30</string>
+    <string>b35</string>
+    <string>b40</string>
+    <string>b45</string>
+    <string>b50</string>
+    <string>mini</string>
+    <string>minor</string>
+    <string>maxi</string>
+    <string>major</string>
+    <string>grand</string>
+    <string>blank</string>
+    <string>sc3</string>
+    <string>sc2</string>
+    <string>sc1</string>
+    <string>gold</string>
+    <string>silver</string>
+    <string>diamond</string>
+    <string>copper</string>
+    <string>empty</string>
+    <string>p6</string>
+    <string>f3</string>
+    <string>f2</string>
+    <string>f1</string>
+    <string>f1d</string>
+    <string>f2d</string>
+    <string>f3d</string>
+    <string>wd2s</string>
+    <string>wd3s</string>
+    <string>dummy</string>
+    <string>f4</string>
+    <string>f4d</string>
+    <string>wild</string>
+    <string>aef</string>
+    <string>kgf</string>
+    <string>qnf</string>
+    <string>jkf</string>
+    <string>tnf</string>
+    <string>b75</string>
+    <string>wildf</string>
+    <string>f2f3</string>
+    <string>preloot</string>
+    <string>bnloot</string>
+    <string>wdloot</string>
+    <string>yes</string>
+    <string>wd</string>
+    <string>p6f</string>
+    <string>p5f</string>
+    <string>p4f</string>
+    <string>p3f</string>
+    <string>p2f</string>
+    <string>p1f</string>
+  </symbols>
+  <GameHistoryConfig gameName="RedEclipseRiches">
+	  <multiplierGroups>
+		  <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="20" staticBetMultiplier="30">
+			  <symbol name="B01" value="1" paid="true"/>
+			  <symbol name="B02" value="2" paid="true"/>
+			  <symbol name="B03" value="3" paid="true"/>
+			  <symbol name="B05" value="5" paid="true"/>
+			  <symbol name="B08" value="8" paid="true"/>
+			  <symbol name="B10" value="10" paid="true"/>
+			  <symbol name="B25" value="25" paid="true"/>
+			  <symbol name="B50" value="50" paid="true"/>
+			  <symbol name="B75" value="75" paid="true"/>
+		  </group>
+	  </multiplierGroups>
+  </GameHistoryConfig>
+</AgtReelConfig>
