@@ -18,7 +18,6 @@ namespace GameHistory.MultiplierRecompute
             if (slot == null) return results;
 
             var mapping = _configParser.GetMultiplierParams();
-            var baseCache = new Dictionary<StrategySpec, decimal?>();   // strategyType -> base, computed once
 
             foreach (var entry in mapping.Mappings)
             {
@@ -27,11 +26,10 @@ namespace GameHistory.MultiplierRecompute
                 var strategy = MultiplierBaseStrategyResolver.Resolve(p.Strategy?.Type, p.Strategy?.Attributes);
                 if (strategy == null) { sLog.WarnFormat("No strategy '{0}' for symbol '{1}'.", p.Strategy?.Type, entry.Key); continue; }
 
-                if (!baseCache.TryGetValue(p.Strategy, out var baseVal))
-                    baseCache[p.Strategy] = baseVal = strategy.GetBase(slot);
+                var wonAmountVal = strategy.GetWonAmount(gameInfo, p);
 
-                if (baseVal == null) continue;        // base unknown -> no overlay for this symbol
-                results[entry.Key] = baseVal.Value * p.Multiplier;
+                if (wonAmountVal == null) continue;        // wonAmount unknown -> no overlay for this symbol
+                results[entry.Key] = wonAmountVal.Value;
             }
             return results;
         }
