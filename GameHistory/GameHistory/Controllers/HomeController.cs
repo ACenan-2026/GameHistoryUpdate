@@ -523,6 +523,18 @@ namespace GameHistory.Controllers
             public bool GateOnRecordedWin { get; set; }
             public MultiplierSymbolMapping Mapping { get; set; }
             public IReadOnlyDictionary<string, decimal> Computed { get; set; }
+
+            /// <summary>
+            /// Whether a symbol's overlay is in scope for display. Paid (B) symbols always are. Unpaid (TB) symbols
+            /// are in scope only when <see cref="IncludeUnpaid"/> is set AND recorded-outcome gating is off. Under
+            /// gating the recorded outcome is the authority on what paid, and an unpaid symbol — which by definition
+            /// did not pay, and is indistinguishable BY AMOUNT from an equal-value paid symbol (both compute the same
+            /// base × value) — must never be an overlay candidate: otherwise, matched by amount in render order, it
+            /// could claim the recorded win of a paying symbol and leave that paying symbol rendered plain. So gating
+            /// makes <see cref="IncludeUnpaid"/> a deliberate no-op. Centralised here so every scope decision (tile
+            /// build, once-cell resolution, recorded-gate candidacy) agrees.
+            /// </summary>
+            public bool InScope(MultiplierParams p) => p.Paid || (IncludeUnpaid && !GateOnRecordedWin);
         }
 
         /// <summary>
@@ -715,7 +727,7 @@ namespace GameHistory.Controllers
                             string symbolName = floorItem?.SymbolName;
                             if (!string.IsNullOrEmpty(symbolName)
                                 && ctx.Mapping.TryGet(symbolName, out var p)
-                                && (p.Paid || ctx.IncludeUnpaid)
+                                && ctx.InScope(p)
                                 && ctx.Computed.TryGetValue(symbolName, out var amount))
                             {
                                 if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
@@ -776,7 +788,7 @@ namespace GameHistory.Controllers
                         if (!string.IsNullOrEmpty(symbolName)
                             && ctx.Mapping.TryGet(symbolName, out var p)
                             && p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence
-                            && (p.Paid || ctx.IncludeUnpaid)
+                            && ctx.InScope(p)
                             && ctx.Computed.ContainsKey(symbolName))
                         {
                             // Last assignment wins => the last in-group occurrence in render order.
@@ -813,7 +825,7 @@ namespace GameHistory.Controllers
             if (ctx == null
                 || string.IsNullOrEmpty(symbolName)
                 || !ctx.Mapping.TryGet(symbolName, out MultiplierParams p)
-                || (!p.Paid && !ctx.IncludeUnpaid)
+                || !ctx.InScope(p)
                 || !ctx.Computed.TryGetValue(symbolName, out amount))
             {
                 return "<img src=\"" + symbolUrl + "\" >";
