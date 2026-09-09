@@ -49,6 +49,19 @@ This hardens the "computed can diverge from recorded" assumption: it converts a 
 
 If we later want the display to reflect reality — show the actual recorded amount, and visually distinguish non-paying multipliers (e.g. grey out a `TB` / didn't-trigger occurrence) — reconcile computed against recorded. This requires the attribution work above (amount-matching, or a `SymbolId → code` map) plus handling its ambiguity, so it is a larger step and should follow Phase 1.
 
+#### Phase 2a (done): opt-in recorded-outcome overlay gate
+
+A narrow slice of Phase 2 now exists as an **opt-in show/hide gate** (not an amount replacement), behind the global `MultiplierRecompute.GateOverlayOnRecordedWin` appSetting (default `false` → historical always-render behaviour is unchanged).
+
+When enabled, a computed overlay is drawn only where the spin's recorded located-scatter outcome confirms the occurrence actually paid — so a scatter multiplier that appeared but did not contribute to the win (e.g. fewer than the trigger count) renders plain instead of showing its theoretical `base × value`. The decision reuses the Phase 1 per-spin multiset reconcile (`RecordedLocatedScatterReader.Parse`, now the single source of truth for the Details parse, shared by the validator and the render gate). It is **per-occurrence**: an occurrence overlays only if its computed amount matches an as-yet-unclaimed recorded located-scatter amount that spin.
+
+Notes and known limits:
+- **Fail-open.** If the recorded outcome cannot be read for a spin, the gate returns null and the tile falls back to showing the computed value, so a parse failure never hides a possibly-real win. Only a successfully-read "nothing paid" hides overlays.
+- **No effect on `TotalScatterWin`.** That strategy already yields no amount unless a scatter paid, so those games behave the same gated or not.
+- **Matching fragility cuts one way.** A spurious computed-vs-recorded mismatch (rounding, or a config/base gap) hides a real overlay under the gate, whereas Phase 1 only logged it. Recommended workflow: run a game with Phase 1 logs first, confirm clean matches, *then* enable the gate.
+- **`TB` (unpaid) symbols never match** a recorded win, so with the gate on they are never overlaid even when `OverlayIncludesUnpaid` is true — which is coherent (they did not pay), but is an interaction to keep in mind.
+- Still **not** amount-replacement or grey-out; it only decides whether the (unchanged) computed value is shown.
+
 ## Framing
 
 Traversing the history JSON is **downstream reconstruction of what the engine already computed and then partly discarded**. As a cross-check within the "stay in the Game History project" constraint it is genuinely useful and low-risk. As a source of per-cell ground truth it is fighting a lossy representation (unreliable `Symbols`, no coordinates, empty multiplier fields), which is why the durable answer still lives upstream — having the engine record the multiplier base and/or its resulting win at spin time.
