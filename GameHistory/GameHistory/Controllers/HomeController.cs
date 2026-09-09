@@ -259,10 +259,17 @@ namespace GameHistory.Controllers
                             html += "<table align=\"center\">";
                             html += "<tr>";
 
+                            // For "once" placement groups, resolve up-front the single winning cell (per group)
+                            // that should carry the overlay for THIS spin; every other in-group occurrence renders
+                            // plain. Empty for the common case of only "all" placement groups.
+                            var onceOverlayCells = ResolveOnceOverlayCells(positionItem, multiplierCtx);
+
+                            int reelIdx = 0;
                             foreach (var reelItem in positionItem.Reels)
                             {
                                 html += "<td>";
                                 html += "<table>";
+                                int floorIdx = 0;
                                 foreach (var floorItem in reelItem.Floors)
                                 {
                                     html += "<tr margin=\"2px 2px 2px 2px\">";
@@ -270,12 +277,14 @@ namespace GameHistory.Controllers
                                     string symbolUrl = Url.Content(floorItem.SymbolName.ToSlotSymbolUrl(gameName, platformType));
                                     // For a configured multiplier symbol the finalised amount is overlaid on the tile;
                                     // every other symbol renders exactly as before.
-                                    html += BuildMultiplierTile(symbolUrl, floorItem.SymbolName, multiplierCtx);
+                                    html += BuildMultiplierTile(symbolUrl, floorItem.SymbolName, multiplierCtx, reelIdx, floorIdx, onceOverlayCells);
                                     html += "</tr>";
                                     html += "<br/>";
+                                    floorIdx++;
                                 }
                                 html += "</table>";
                                 html += "</td>";
+                                reelIdx++;
                             }
 
                             html += "</tr>";
@@ -628,23 +637,94 @@ namespace GameHistory.Controllers
         }
 
         /// <summary>
+        /// A single grid position (reel/column index, floor/row index) within one spin. Used to pin a
+        /// "once" placement overlay to exactly one cell.
+        /// </summary>
+        private struct GridCell
+        {
+            public int Reel { get; }
+            public int Floor { get; }
+            public GridCell(int reel, int floor) { Reel = reel; Floor = floor; }
+        }
+
+        /// <summary>
+        /// For each "once" placement group present in this spin, resolves the single cell that should carry the
+        /// overlay: the LAST in-group occurrence in render order (reels left-to-right, floors top-to-bottom), keyed
+        /// by group name. Only symbols that are in scope (paid, or unpaid when OverlayIncludesUnpaid) and have a
+        /// computed amount are considered, so a group whose win did not resolve this spin contributes nothing.
+        /// Returns an empty dictionary when there is no context or no "once" group occurs — the common path.
+        /// The iteration order here mirrors the tile render loop so the chosen cell matches what is drawn.
+        /// </summary>
+        private static Dictionary<string, GridCell> ResolveOnceOverlayCells(SlotSymbolTableViewModel spin, MultiplierOverlayContext ctx)
+        {
+            var winners = new Dictionary<string, GridCell>();
+            if (ctx == null || spin?.Reels == null) return winners;
+
+            int reelIdx = 0;
+            foreach (var reelItem in spin.Reels)
+            {
+                int floorIdx = 0;
+                if (reelItem?.Floors != null)
+                {
+                    foreach (var floorItem in reelItem.Floors)
+                    {
+                        string symbolName = floorItem?.SymbolName;
+                        if (!string.IsNullOrEmpty(symbolName)
+                            && ctx.Mapping.TryGet(symbolName, out var p)
+                            && p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence
+                            && (p.Paid || ctx.IncludeUnpaid)
+                            && ctx.Computed.ContainsKey(symbolName))
+                        {
+                            // Last assignment wins => the last in-group occurrence in render order.
+                            winners[p.GroupName ?? symbolName] = new GridCell(reelIdx, floorIdx);
+                        }
+                        floorIdx++;
+                    }
+                }
+                reelIdx++;
+            }
+            return winners;
+        }
+
+        /// <summary>
         /// Builds the HTML for a single outcome tile. For a configured multiplier symbol that is in scope
         /// (paid, or unpaid when OverlayIncludesUnpaid is set) and has a computed amount, the finalised amount is
         /// overlaid on top of the symbol artwork; otherwise the plain symbol image is returned unchanged.
+        /// For a "once" placement group the overlay is drawn on a single cell per spin (see
+        /// <see cref="ResolveOnceOverlayCells"/>); other in-group occurrences render plain.
         /// <paramref name="symbolUrl"/> must already be resolved via Url.Content.
+        /// <paramref name="reelIndex"/>/<paramref name="floorIndex"/> locate this tile in the spin grid.
         /// </summary>
-        private static string BuildMultiplierTile(string symbolUrl, string symbolName, MultiplierOverlayContext ctx)
+        private static string BuildMultiplierTile(
+            string symbolUrl,
+            string symbolName,
+            MultiplierOverlayContext ctx,
+            int reelIndex,
+            int floorIndex,
+            Dictionary<string, GridCell> onceOverlayCells)
         {
-            MultiplierParams p;
             // Fallback in case the symbol is not in the mapping or has no computed amount: render the plain symbol image.
             decimal amount;
             if (ctx == null
                 || string.IsNullOrEmpty(symbolName)
-                || !ctx.Mapping.TryGet(symbolName, out p)
+                || !ctx.Mapping.TryGet(symbolName, out MultiplierParams p)
                 || (!p.Paid && !ctx.IncludeUnpaid)
                 || !ctx.Computed.TryGetValue(symbolName, out amount))
             {
                 return "<img src=\"" + symbolUrl + "\" >";
+            }
+
+            // "Once" placement: draw the overlay only on the resolved winning cell for this group; every other
+            // in-group occurrence (e.g. the two trigger 'Wh' symbols) renders as the plain symbol image.
+            if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+            {
+                if (onceOverlayCells == null
+                    || !onceOverlayCells.TryGetValue(p.GroupName ?? symbolName, out var winner)
+                    || winner.Reel != reelIndex
+                    || winner.Floor != floorIndex)
+                {
+                    return "<img src=\"" + symbolUrl + "\" >";
+                }
             }
 
             string text = HttpUtility.HtmlEncode(FormatOverlayAmount(amount));

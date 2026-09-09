@@ -22,18 +22,50 @@ namespace GameHistory.MultiplierRecompute
 
             return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
         }
+
+        /// <summary>
+        /// The recorded Details "Type" tokens that denote a scatter-kind win — the same field paylines are read
+        /// from ("Type: Payline"), so scatter wins and payline wins are told apart by ONE consistent field. This is
+        /// the code-owned mapping from the domain concept "a scatter/feature win entry" to the concrete persistence
+        /// tokens that realise it, so game config never has to name a database token; recognised spellings are
+        /// collected HERE, in one place, with room for alternatives not yet observed.
+        ///
+        /// Why "Type" and not "ScatterType": across real records the Type field is the stable, consistent
+        /// discriminator (only "Basic_Scatter" / "Payline" seen), whereas ScatterType is not — Eagle Dollar records
+        /// its feature win as "LocatedScatter" but Reel Hot 7s records its as "NormalScatter", and Eagle also emits
+        /// "NormalScatter" entries that are mere symbol-presence markers. The entry that actually PAID is isolated by
+        /// a non-empty WinAmount, which callers require in addition to this category check.
+        ///
+        /// ASSUMES that for a game which opts into a recorded-outcome strategy, the round's paying scatter entry IS
+        /// the feature win (no unrelated ordinary-scatter pay carrying a WinAmount that should not be counted). This
+        /// is coarser than isolating by ScatterType, but that precision is not available anyway once a feature win
+        /// can be a "NormalScatter". The Phase 1 validator surfaces a violation as an unexplained-recorded WARN.
+        /// </summary>
+        private static readonly HashSet<string> sScatterWinCategories =
+            new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "Basic_Scatter" };
+
+        /// <summary>
+        /// True when a Details entry's "Type" denotes a scatter-kind win (see <see cref="sScatterWinCategories"/>).
+        /// Callers pair this with a numeric WinAmount to isolate the entry that actually paid from non-paying
+        /// scatter markers and from payline wins.
+        /// </summary>
+        internal static bool IsScatterWinCategory(string type) =>
+            !string.IsNullOrEmpty(type) && sScatterWinCategories.Contains(type);
     }
 
 
     /// <summary>
-    /// Defines the interface for multiplier base strategies. Each strategy will implement this interface to provide a
-    /// specific way to calculate the base value for multipliers based on the game history slot model.
-    /// Returns null when the base cannot be determined, so the caller can fall back to rendering the plain
-    /// multiplier symbol rather than a wrong (or missing) value.
+    /// Defines the interface for multiplier strategies. Each strategy computes the finalised amount to
+    /// overlay on a multiplier symbol, given the full game-round model and that symbol's config params.
+    /// Most strategies compute base × params.Multiplier from round-level data (the total bet); some
+    /// (e.g. <see cref="TotalScatterWinStrategy"/>) instead read the recorded outcome from the round. The full
+    /// <see cref="GameHistoryGameInfoModel"/> is passed so a strategy can reach either.
+    /// Returns null when the amount cannot be determined, so the caller can fall back to rendering the
+    /// plain multiplier symbol rather than a wrong (or missing) value.
     /// </summary>
     public interface IMultiplierBaseStrategy
     {
-        decimal? GetBase(GameHistoryGameInfoSlotModel gameInfoSlotModel);
+        decimal? GetWonAmount(GameHistoryGameInfoModel gameInfo, MultiplierParams multiplierParams);
     }
 
 
@@ -48,8 +80,10 @@ namespace GameHistory.MultiplierRecompute
         /// </summary>
         public static readonly TotalBetStrategy Instance = new TotalBetStrategy();
 
-        public decimal? GetBase(GameHistoryGameInfoSlotModel s) =>
-            ComputationHelpers.TryParseMoney(s?.Bet, out decimal value) ? value : (decimal?)null;
+        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfoSlotModel, MultiplierParams multiplierParams) =>
+            ComputationHelpers.TryParseMoney(gameInfoSlotModel?.GameHistoryGameInfoSlotModel?.Bet, out decimal totalBet) 
+            ? totalBet * multiplierParams.Multiplier 
+            : (decimal?)null;
     }
 
     /// <summary>
@@ -73,10 +107,101 @@ namespace GameHistory.MultiplierRecompute
             _denominator = denominator;
         }
 
-        public decimal? GetBase(GameHistoryGameInfoSlotModel s) =>
-            ComputationHelpers.TryParseMoney(s?.Bet, out var totalBet) 
-                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero)
+        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfoSlotModel, MultiplierParams multiplierParams) =>
+            ComputationHelpers.TryParseMoney(gameInfoSlotModel?.GameHistoryGameInfoSlotModel?.Bet, out var totalBet) 
+                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier    
                 : (decimal?)null;
+    }
+
+    /// <summary>
+    /// Reads the finalised amount straight from the recorded outcome instead of computing it. Use this
+    /// for games where the multiplier is resolved by a mechanic that history does not fully record — for
+    /// example a fortune wheel that can land a base×wheel multiplier OR a fixed jackpot (Mini/Minor/
+    /// Major/Grand) — but that always records the resulting located-scatter win.
+    ///
+    /// It returns the scatter-win WinAmount(s) recorded in the spin Details, which isolates the
+    /// multiplier win from other wins: each Details entry carries a "Type" — a payline win is "Type: Payline",
+    /// a scatter-kind win is "Type: Basic_Scatter" — and the entry that actually PAID carries a non-empty
+    /// WinAmount. Which "Type" tokens count is a code-owned concern (see
+    /// <see cref="ComputationHelpers.IsScatterWinCategory"/>), so the game config never has to name a database
+    /// token. When no paying scatter win is recorded — e.g. a spin where the Wh symbol appeared but the wheel did
+    /// not trigger and only a payline paid — it returns null so the tile renders plain rather than showing an
+    /// unrelated win. It deliberately does NOT fall back to the round's total Won, which would include payline wins.
+    /// It is stateless — no config values are needed; the config only lists which symbol(s) are the target.
+    ///
+    /// ASSUMES one located pay per record, shown on the one visible overlay symbol. If a record ever
+    /// carried multiple located pays this returns their sum, which is only meaningful for a single tile.
+    /// Returns null when no located-scatter amount is recorded, so the caller renders the plain symbol.
+    /// </summary>
+    public sealed class TotalScatterWinStrategy : IMultiplierBaseStrategy
+    {
+        /// <summary>Shared stateless instance — the strategy reads only the recorded outcome.</summary>
+        public static readonly TotalScatterWinStrategy Instance = new TotalScatterWinStrategy();
+
+        private static readonly string[] DetailLineSeparator = { "<br/>" };
+
+        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfo, MultiplierParams multiplierParams)
+        {
+            // Overlay ONLY a paying scatter-kind win. A spin can show a multiplier symbol without the wheel
+            // feature triggering — e.g. only a payline win, with no paying scatter. The Details entries
+            // distinguish these by "Type" (a payline win is "Type: Payline"; a scatter-kind win is
+            // "Type: Basic_Scatter" — see ComputationHelpers.IsScatterWinCategory) plus a non-empty WinAmount, so
+            // a payline win is ignored and we return null → the Wh tile renders plain rather than greedily showing
+            // an unrelated win. Do NOT fall back to the round's total Won: that total includes payline wins and
+            // would be painted onto an uninvolved tile.
+            return TryGetRecordedLocatedWon(gameInfo, out decimal located) ? located : (decimal?)null;
+        }
+
+        /// <summary>
+        /// Sums the located-scatter WinAmounts recorded across the round's spin Details. Returns false
+        /// when none are present. Under the single-pay assumption this is a single amount.
+        /// </summary>
+        private static bool TryGetRecordedLocatedWon(GameHistoryGameInfoModel gameInfo, out decimal total)
+        {
+            total = 0m;
+            var details = gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
+            if (details == null) return false;
+
+            bool found = false;
+            foreach (var spin in details)
+            {
+                if (string.IsNullOrEmpty(spin?.Details)) continue;
+
+                foreach (var line in spin.Details.Split(DetailLineSeparator, System.StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (TryGetLocatedScatterAmount(line, out decimal amount))
+                    {
+                        total += amount;
+                        found = true;
+                    }
+                }
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// Parses one "key: value,key: value,…" Details line; returns true with the amount when it is a
+        /// scatter-kind entry (by its "Type") carrying a numeric WinAmount — i.e. the entry that actually paid.
+        /// </summary>
+        private static bool TryGetLocatedScatterAmount(string line, out decimal amount)
+        {
+            amount = 0m;
+            string winType = null;
+            string winAmount = null;
+
+            foreach (var part in line.Split(','))
+            {
+                int idx = part.IndexOf(':');
+                if (idx <= 0) continue;
+                string key = part.Substring(0, idx).Trim();
+                string val = part.Substring(idx + 1).Trim();
+                if (key.Equals("Type", System.StringComparison.OrdinalIgnoreCase)) winType = val;
+                else if (key.Equals("WinAmount", System.StringComparison.OrdinalIgnoreCase)) winAmount = val;
+            }
+
+            return ComputationHelpers.IsScatterWinCategory(winType)
+                && ComputationHelpers.TryParseMoney(winAmount, out amount);
+        }
     }
 
 
@@ -134,6 +259,10 @@ namespace GameHistory.MultiplierRecompute
                         return null;
                     }
                     return new LineBetTotalStrategy(lines, staticMult);
+                case "TotalScatterWin":
+                    // Reads the finalised amount straight from the recorded located-scatter win — for
+                    // wheel/jackpot games where the amount can't be reconstructed from config values.
+                    return TotalScatterWinStrategy.Instance;
                 default:
                     return null;
             }

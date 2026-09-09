@@ -68,6 +68,10 @@ namespace GameHistory.MultiplierRecompute
 
         /// <summary>
         /// Gathers every paid-multiplier symbol occurrence in a spin's grid, paired with its computed amount.
+        /// Mirrors the display's placement rule so the cross-check counts what is actually overlaid: a group whose
+        /// placement is <see cref="MultiplierOverlayPlacement.OnceOnLastOccurrence"/> contributes a single entry
+        /// per spin (its members share one recorded win), so its several on-grid tiles are not miscounted as
+        /// several independent wins. "All" placement groups still contribute one entry per occurrence.
         /// </summary>
         private static List<KeyValuePair<string, decimal>> CollectComputedPaidMultipliers(
             SlotUserPositionKeyValuePair grid,
@@ -77,6 +81,8 @@ namespace GameHistory.MultiplierRecompute
             var computed = new List<KeyValuePair<string, decimal>>();
             var rows = grid?.Value;
             if (rows == null) return computed;
+
+            HashSet<string> onceGroupsCounted = null;
 
             foreach (var row in rows)
             {
@@ -89,6 +95,13 @@ namespace GameHistory.MultiplierRecompute
                     if (mapping.TryGet(symbol, out var p) && p.Paid
                         && computedBySymbol.TryGetValue(symbol, out var amount))
                     {
+                        if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+                        {
+                            // One overlay is shown per group per spin, so count it once regardless of how many
+                            // in-group tiles are on the grid.
+                            if (onceGroupsCounted == null) onceGroupsCounted = new HashSet<string>();
+                            if (!onceGroupsCounted.Add(p.GroupName ?? symbol)) continue;
+                        }
                         computed.Add(new KeyValuePair<string, decimal>(symbol, amount));
                     }
                 }
@@ -97,8 +110,8 @@ namespace GameHistory.MultiplierRecompute
         }
 
         /// <summary>
-        /// Extracts the WinAmount of every located-scatter win from a spin's semi-structured Details string.
-        /// Entries with an empty WinAmount are skipped; zeros are kept (a located scatter that did not pay).
+        /// Extracts the WinAmount of every paying scatter-kind win (by Details "Type") from a spin's semi-structured
+        /// Details string. Entries with an empty WinAmount are skipped; zeros are kept (a scatter that did not pay).
         /// </summary>
         private static List<decimal> ParseLocatedScatterAmounts(string details)
         {
@@ -109,8 +122,8 @@ namespace GameHistory.MultiplierRecompute
             foreach (var line in lines)
             {
                 var fields = ParseFields(line);
-                if (fields.TryGetValue("ScatterType", out var scatterType)
-                    && scatterType.Equals("LocatedScatter", StringComparison.OrdinalIgnoreCase)
+                if (fields.TryGetValue("Type", out var winType)
+                    && ComputationHelpers.IsScatterWinCategory(winType)
                     && fields.TryGetValue("WinAmount", out var winAmount)
                     && ComputationHelpers.TryParseMoney(winAmount, out var amount))
                 {

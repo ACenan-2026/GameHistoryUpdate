@@ -24,8 +24,28 @@ namespace GameHistory.MultiplierRecompute
 
 
     /// <summary>
-    /// Represents the parameters associated with a multiplier symbol, including its multiplier value, 
+    /// Controls how many of a multiplier symbol's on-grid occurrences carry the finalised-amount overlay.
+    ///  - <see cref="All"/>: overlay every occurrence (the default). Correct when each occurrence is an
+    ///    independent win, e.g. located scatters where B01, B10, B01 each paid their own amount.
+    ///  - <see cref="OnceOnLastOccurrence"/>: overlay a single occurrence per spin, on the LAST (right-most
+    ///    reel, then lowest floor) in-group tile. Use it when several tiles share one recorded win that was
+    ///    only won once — e.g. a wheel feature triggered by three 'Wh' symbols where only the last (result)
+    ///    symbol carries the multiplier and the recorded located-scatter win is a single amount. Painting it
+    ///    on every 'Wh' would imply the amount was won three times.
+    /// </summary>
+    public enum MultiplierOverlayPlacement
+    {
+        All,
+        OnceOnLastOccurrence
+    }
+
+    /// <summary>
+    /// Represents the parameters associated with a multiplier symbol, including its multiplier value,
     /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
+    /// <see cref="GroupName"/> and <see cref="Placement"/> are group-level display settings shared by every
+    /// symbol in the same &lt;group&gt;; <see cref="Placement"/> decides how many occurrences are overlaid and
+    /// <see cref="GroupName"/> lets the "once" placement dedupe across all members of a group (which may carry
+    /// different codes, e.g. Wh / Wh2 / Wh3).
     /// All of these fields are set via an XML configuration file and are immutable once the object is created.
     /// </summary>
     public sealed class MultiplierParams
@@ -33,15 +53,24 @@ namespace GameHistory.MultiplierRecompute
         public int Multiplier {  get; }
         public bool Paid { get; }
         public StrategySpec Strategy { get; }
+        public string GroupName { get; }
+        public MultiplierOverlayPlacement Placement { get; }
 
-        public MultiplierParams(int multiplier, bool paid, StrategySpec strategy)
+        public MultiplierParams(
+            int multiplier,
+            bool paid,
+            StrategySpec strategy,
+            string groupName = null,
+            MultiplierOverlayPlacement placement = MultiplierOverlayPlacement.All)
         {
             Multiplier = multiplier;
             Paid = paid;
             Strategy = strategy;
+            GroupName = groupName;
+            Placement = placement;
         }
 
-    } 
+    }
 
     /// <summary>
     /// Maps multiplier symbol names to their corresponding params (see <cref cref="MultiplierParams" />.
@@ -109,7 +138,7 @@ namespace GameHistory.MultiplierRecompute
 
                 string groupName = groupElement.Attribute("name")?.Value ?? "(unnamed)";
 
-                // creating a dictionary out of the current groupElement's attributes 
+                // creating a dictionary out of the current groupElement's attributes
                 string strategy = groupElement.Attribute("strategy")?.Value;
 
                 var attrs = groupElement.Attributes()
@@ -121,6 +150,8 @@ namespace GameHistory.MultiplierRecompute
                     sLog.WarnFormat("Multiplier group '{0}' has no strategy; its symbols will not resolve a base value.", groupName);
                 }
 
+                MultiplierOverlayPlacement placement = ParsePlacement(groupElement.Attribute("overlay")?.Value, groupName);
+
                 foreach (var symbolElement in groupElement.Elements("symbol"))
                 {
                     string symbol = symbolElement.Attribute("name")?.Value;
@@ -129,16 +160,41 @@ namespace GameHistory.MultiplierRecompute
                         sLog.WarnFormat("Skipping a symbol with a missing 'name' attribute in multiplier group '{0}'.", groupName);
                         continue;
                     }
-                    int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1;
+                    int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1000000007;        // if your multiplier is 109, you are probably missing a value attribute in the XML
                     bool paid = bool.TryParse(symbolElement.Attribute("paid")?.Value, out var p) && p;
 
-                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, paid, spec)))
+                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, paid, spec, groupName, placement)))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
                     }
                 }
             }
             return multiplierMap;
+        }
+
+        /// <summary>
+        /// Parses the optional group-level "overlay" attribute into a <see cref="MultiplierOverlayPlacement"/>.
+        /// Absent/empty or "all" -> <see cref="MultiplierOverlayPlacement.All"/> (the default, every occurrence
+        /// overlaid). "once"/"onceLast"/"onceOnLastOccurrence" -> overlay a single occurrence per spin on the
+        /// last in-group tile. An unrecognised value is treated as All and warned, so a typo degrades to the
+        /// safe, historical behaviour rather than silently suppressing overlays.
+        /// </summary>
+        private static MultiplierOverlayPlacement ParsePlacement(string raw, string groupName)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return MultiplierOverlayPlacement.All;
+
+            switch (raw.Trim().ToLowerInvariant())
+            {
+                case "all":
+                    return MultiplierOverlayPlacement.All;
+                case "once":
+                case "oncelast":
+                case "onceonlastoccurrence":
+                    return MultiplierOverlayPlacement.OnceOnLastOccurrence;
+                default:
+                    sLog.WarnFormat("Multiplier group '{0}' has unrecognised overlay '{1}'; defaulting to 'all'.", groupName, raw);
+                    return MultiplierOverlayPlacement.All;
+            }
         }
     }
 }

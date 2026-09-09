@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AgtReelConfig>
+  <agtReels>
+    <agtReel name="reel1" row="0" column="0" />
+    <agtReel name="reel2" row="0" column="1" />
+    <agtReel name="reel3" row="0" column="2" />
+  </agtReels>
+	<GameHistoryConfig gameName="ReelHot7sClassic">
+		<multiplierGroups>
+			<!-- Wheel of Fortune feature. Triggered by three 'Wh' symbols, one on each of reels 1, 2 and 3.
+			     Only the reel-3 symbol carries the multiplier: it is replaced (Wheel_Mult in the game math) with
+			     Wh (x1, ~69%), Wh2 (x2), Wh3 (x3), Wh4 (x4) or Wh5 (x5); reels 1 and 2 stay plain 'Wh'. The final
+			     amount = wheel credit slice (25..1000) x that multiplier, and history records it as a single
+			     located-scatter win. So, exactly like Eagle Dollar, TotalScatterWin reads that recorded amount
+			     straight from the round rather than reconstructing base x value.
+
+			     Difference from Eagle Dollar: there up to THREE tiles carry a 'Wh'-family code, but the win was
+			     won once. overlay="onceLast" draws the amount on a SINGLE tile per spin - the last in-group
+			     occurrence in render order, i.e. the reel-3 result symbol. This also covers the x1 case, where the
+			     result symbol is a plain 'Wh' indistinguishable by code from the two trigger 'Wh's, so it can only
+			     be picked out by position.
+
+			     value = the wheel multiplier (Wh=x1 .. Wh5=x5). Documentation only - TotalScatterWin does not use
+			     it - but it keeps a consistent symbol-to-multiplier mapping. -->
+			<group name="WheelResult" strategy="TotalScatterWin" overlay="onceLast">
+				<symbol name="Wh"  value="1" paid="true"/>
+				<symbol name="Wh2" value="2" paid="true"/>
+				<symbol name="Wh3" value="3" paid="true"/>
+				<symbol name="Wh4" value="4" paid="true"/>
+				<symbol name="Wh5" value="5" paid="true"/>
+			</group>
+		</multiplierGroups>
+	</GameHistoryConfig>
+</AgtReelConfig>
