@@ -31,21 +31,20 @@ namespace GameHistory.MultiplierRecompute
         /// discrepancies (also logged); the result is returned mainly for testing and for callers that want to act.
         /// </summary>
         public MultiplierValidationResult ValidateRound(
-            GameHistoryGameInfoModel gameInfo,
+            ISlotRoundReader slotRoundReader,
             MultiplierSymbolMapping mapping,
             IReadOnlyDictionary<string, decimal> computedBySymbol)
         {
             var result = new MultiplierValidationResult();
 
-            var slotPositions = gameInfo?.UserPositions?.SlotUsersPositionsAndDetails;
-            var grids = slotPositions?.SlotUserPositionDict;
-            var details = slotPositions?.SlotDetails?.SlotDetails;
+            var grids = slotRoundReader.GetUserPositionDict();
+            var details = slotRoundReader.GetSlotDetails();
             if (grids == null || details == null || mapping == null || computedBySymbol == null)
             {
                 return result;
             }
 
-            string gameName = gameInfo.GameHistoryGameInfoSlotModel?.GameName ?? "(unknown game)";
+            string gameName = slotRoundReader.GetGameName() ?? "(unknown game)";
 
             int spinCount = Math.Min(grids.Count, details.Count);
             if (grids.Count != details.Count)
@@ -55,11 +54,13 @@ namespace GameHistory.MultiplierRecompute
                     gameName, grids.Count, details.Count, spinCount);
             }
 
+            var allScatterWins = slotRoundReader.GetScatterWins();
+
             for (int i = 0; i < spinCount; i++)
             {
                 string spinKey = grids[i]?.Key ?? i.ToString();
                 var computed = CollectComputedPaidMultipliers(grids[i], mapping, computedBySymbol);
-                var recorded = RecordedLocatedScatterReader.Parse(details[i]?.Details);
+                var recorded = allScatterWins.ElementAtOrDefault(i) ?? new List<decimal>();
                 Reconcile(gameName, spinKey, computed, recorded, result);
             }
 
@@ -120,11 +121,9 @@ namespace GameHistory.MultiplierRecompute
             string gameName,
             string spinKey,
             List<KeyValuePair<string, decimal>> computed,
-            List<decimal> recorded,
+            List<decimal> recordedPool,
             MultiplierValidationResult result)
         {
-            var recordedPool = recorded.Where(a => a != 0m).ToList();
-
             foreach (var c in computed)
             {
                 int idx = recordedPool.IndexOf(c.Value);
@@ -181,54 +180,5 @@ namespace GameHistory.MultiplierRecompute
         public List<MultiplierDiscrepancy> UnmatchedComputed { get; } = new List<MultiplierDiscrepancy>();
 
         public bool HasDiscrepancies => UnexplainedRecorded.Count > 0 || UnmatchedComputed.Count > 0;
-    }
-
-    /// <summary>
-    /// Single source of truth for reading the recorded located-scatter payouts out of a spin's semi-structured,
-    /// "&lt;br/&gt;"-delimited Details string. Used by BOTH the log-only Phase 1 validator and the optional
-    /// recorded-outcome display gate (HomeController), so the brittle parse of the upstream Details format lives in
-    /// exactly one place — the maintenance surface the validation notes flag. Returns the WinAmount of every paying
-    /// scatter-kind entry (recognised by its "Type"); entries with an empty WinAmount are skipped, and zeros are
-    /// kept (a located scatter that appeared but did not pay).
-    /// </summary>
-    public static class RecordedLocatedScatterReader
-    {
-        private static readonly string[] LineSeparator = { "<br/>" };
-
-        public static List<decimal> Parse(string details)
-        {
-            var amounts = new List<decimal>();
-            if (string.IsNullOrEmpty(details)) return amounts;
-
-            foreach (var line in details.Split(LineSeparator, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var fields = ParseFields(line);
-                if (fields.TryGetValue("Type", out var winType)
-                    && ComputationHelpers.IsScatterWinCategory(winType)
-                    && fields.TryGetValue("WinAmount", out var winAmount)
-                    && ComputationHelpers.TryParseMoney(winAmount, out var amount))
-                {
-                    amounts.Add(amount);
-                }
-            }
-            return amounts;
-        }
-
-        /// <summary>
-        /// Parses one "key: value,key: value,..." Details line into a case-insensitive field lookup.
-        /// </summary>
-        private static Dictionary<string, string> ParseFields(string line)
-        {
-            var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var part in line.Split(','))
-            {
-                int idx = part.IndexOf(':');
-                if (idx <= 0) continue;
-                string key = part.Substring(0, idx).Trim();
-                string val = part.Substring(idx + 1).Trim();
-                if (!fields.ContainsKey(key)) fields[key] = val;
-            }
-            return fields;
-        }
     }
 }

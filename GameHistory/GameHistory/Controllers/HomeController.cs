@@ -226,9 +226,11 @@ namespace GameHistory.Controllers
                     TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple
                 });
 
+                var slotRoundReader = new SlotRoundReader(data.GameHistoryDetailsMember);
 
-                // Current game is not completed
-                if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
+
+                    // Current game is not completed
+                    if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
                 {
                     return PartialView("GameInRestore", null);
                 }
@@ -244,12 +246,12 @@ namespace GameHistory.Controllers
 
                     // Multiplier recompute: compute the finalised amounts (and run the log-only validation). The
                     // returned context drives the amount overlay in the tile loop below; null => render plain symbols.
-                    string gameName = data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.GameName;
-                    MultiplierOverlayContext multiplierCtx = PrepareMultiplierData(data.GameHistoryDetailsMember);
+                    string gameName = slotRoundReader.GetGameName();
+                    MultiplierOverlayContext multiplierCtx = PrepareMultiplierData(slotRoundReader);
 
                     #region Replace symbol names with symbol images
                     int counter = 0;
-                    foreach (var slotDetailsItem in data.GameHistoryDetailsMember.UserPositions.SlotUsersPositionsAndDetails.SlotDetails.SlotDetails)
+                    foreach (var slotDetailsItem in slotRoundReader.GetSlotDetails())
                     {
                         html = "";
 
@@ -269,7 +271,7 @@ namespace GameHistory.Controllers
                             // off or the outcome could not be read => the tile builder shows the computed value.
                             RecordedOverlayGate recordedGate =
                                 (multiplierCtx != null && multiplierCtx.GateOnRecordedWin)
-                                    ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx)
+                                    ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx, slotRoundReader)
                                     : null;
 
                             int reelIdx = 0;
@@ -549,7 +551,7 @@ namespace GameHistory.Controllers
         /// Overlay scope is controlled by "MultiplierRecompute.OverlayIncludesUnpaid": false (default) overlays
         /// only paid (B) located-scatter multipliers; true also overlays unpaid (TB) ones.
         /// </summary>
-        private MultiplierOverlayContext PrepareMultiplierData(GameHistoryGameInfoModel member)
+        private MultiplierOverlayContext PrepareMultiplierData(ISlotRoundReader slotRoundReader)
         {
             try
             {
@@ -559,7 +561,7 @@ namespace GameHistory.Controllers
                     return null;
                 }
 
-                string gameName = member?.GameHistoryGameInfoSlotModel?.GameName;
+                string gameName = slotRoundReader.GetGameName();
                 if (string.IsNullOrEmpty(gameName))
                 {
                     return null;
@@ -603,7 +605,7 @@ namespace GameHistory.Controllers
                 }
 
                 // maps multiplier name to finalised amount
-                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(member);
+                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(slotRoundReader);
 
                 if (sLog.IsDebugEnabled)
                 {
@@ -614,7 +616,7 @@ namespace GameHistory.Controllers
                 }
 
                 // Phase 1 validation stays log-only; it never alters what the loop below renders.
-                new MultiplierComputationValidator().ValidateRound(member, mapping, computed);
+                new MultiplierComputationValidator().ValidateRound(slotRoundReader, mapping, computed);
 
                 // Web.Config GameHistory Settings
                 bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.OverlayIncludesUnpaid"], out bool includeUnpaid);
@@ -705,13 +707,14 @@ namespace GameHistory.Controllers
         /// it means the spin genuinely recorded no paying located scatter, so nothing is overlaid.
         /// </summary>
         private static RecordedOverlayGate ResolveRecordedOverlayGate(
-            SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx)
+            SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx, ISlotRoundReader slotRoundReader)
         {
             if (ctx == null || spin?.Reels == null) return null;
             try
             {
-                // Non-paying located scatters record 0; drop them so they are not match targets.
-                var pool = RecordedLocatedScatterReader.Parse(spinDetails).Where(a => a != 0m).ToList();
+                // Recorded located-scatter wins for this spin, read through the single reader. The reader already
+                // drops non-paying zero markers, so these are all real amounts and valid match targets.
+                var pool = slotRoundReader.GetOneSpinScatterWins(spinDetails);
 
                 var gate = new RecordedOverlayGate();
                 HashSet<string> onceSeen = null;
