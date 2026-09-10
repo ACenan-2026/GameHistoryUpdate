@@ -266,11 +266,14 @@ namespace GameHistory.Controllers
                             // plain. Empty for the common case of only "all" placement groups.
                             var onceOverlayCells = ResolveOnceOverlayCells(positionItem, multiplierCtx);
 
-                            // When recorded-outcome gating is on, resolve up-front which occurrences this spin
-                            // actually paid (matched against the recorded located-scatter wins). null when gating is
-                            // off or the outcome could not be read => the tile builder shows the computed value.
+                            // Resolve up-front which occurrences this spin actually paid (matched against the
+                            // recorded located-scatter wins). Computed for EVERY round now, not just when gating
+                            // is on: the tile builder uses it to pick the paid vs unpaid render style, and — only
+                            // when GateOnRecordedWin is set — to suppress the non-payers entirely. null means the
+                            // outcome could not be read for this spin => the tile builder fails open (paid look,
+                            // never suppressed).
                             RecordedOverlayGate recordedGate =
-                                (multiplierCtx != null && multiplierCtx.GateOnRecordedWin)
+                                (multiplierCtx != null)
                                     ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx, slotRoundReader)
                                     : null;
 
@@ -527,14 +530,15 @@ namespace GameHistory.Controllers
             public IReadOnlyDictionary<string, decimal> Computed { get; set; }
 
             /// <summary>
-            /// Whether a symbol's overlay is in scope for display. Paid (B) symbols always are. Unpaid (TB) symbols
-            /// are in scope only when <see cref="IncludeUnpaid"/> is set AND recorded-outcome gating is off. Under
-            /// gating the recorded outcome is the authority on what paid, and an unpaid symbol — which by definition
-            /// did not pay, and is indistinguishable BY AMOUNT from an equal-value paid symbol (both compute the same
-            /// base × value) — must never be an overlay candidate: otherwise, matched by amount in render order, it
-            /// could claim the recorded win of a paying symbol and leave that paying symbol rendered plain. So gating
-            /// makes <see cref="IncludeUnpaid"/> a deliberate no-op. Centralised here so every scope decision (tile
-            /// build, once-cell resolution, recorded-gate candidacy) agrees.
+            /// Whether a symbol's overlay is in scope for DISPLAY (i.e. a number is drawn at all). Paid (B) symbols
+            /// always are. Unpaid (TB) symbols are in scope only when <see cref="IncludeUnpaid"/> is set AND
+            /// recorded-outcome gating is off; under gating the recorded outcome is the authority on what paid, so a
+            /// TB — which by definition did not pay — is not displayed, making <see cref="IncludeUnpaid"/> a deliberate
+            /// no-op there. This governs visibility only; which STYLE (paid vs unpaid) a displayed tile takes is a
+            /// separate decision made in BuildMultiplierTile from the recorded-outcome gate. Recorded-gate CANDIDACY
+            /// is deliberately not routed through here — only paid-class symbols may claim a recorded win (see
+            /// ResolveRecordedOverlayGate), so a TB cannot steal an equal-value paid symbol's win. Used by tile build
+            /// and once-cell resolution so those two visibility decisions agree.
             /// </summary>
             public bool InScope(MultiplierParams p) => p.Paid || (IncludeUnpaid && !GateOnRecordedWin);
         }
@@ -694,17 +698,20 @@ namespace GameHistory.Controllers
         }
 
         /// <summary>
-        /// Builds the per-spin recorded-outcome gate: decides which in-scope multiplier occurrences actually paid by
+        /// Builds the per-spin recorded-outcome gate: decides which PAID-class multiplier occurrences actually paid by
         /// matching each occurrence's computed amount against the spin's recorded located-scatter wins as a MULTISET
         /// — the very reconcile the Phase 1 validator does for logging, here promoted to a display decision. An
-        /// occurrence whose amount finds an as-yet-unclaimed recorded win is "matched" (overlay shown); the rest
-        /// render plain. The grid is walked in render order so duplicate amounts are consumed the same way the tiles
-        /// are drawn (a tie between two equal-amount cells resolves to the earlier one, matching how the loop paints).
-        /// Recorded zeros are not match targets (they are non-paying located scatters).
+        /// occurrence whose amount finds an as-yet-unclaimed recorded win is "matched"; the rest did not pay. The grid
+        /// is walked in render order so duplicate amounts are consumed the same way the tiles are drawn (a tie between
+        /// two equal-amount cells resolves to the earlier one, matching how the loop paints). Only paid-class symbols
+        /// are candidates: a statically-unpaid (TB) symbol shares an equal-value paid symbol's amount and must not be
+        /// able to claim its win. Recorded zeros are not match targets (they are non-paying located scatters).
         ///
-        /// Returns null if the recorded outcome cannot be read for this spin, so the caller FAILS OPEN (shows the
-        /// computed value) rather than hiding a win we merely failed to parse. An empty (non-null) gate is different:
-        /// it means the spin genuinely recorded no paying located scatter, so nothing is overlaid.
+        /// Computed for every round. The result drives the paid vs unpaid render style always, and additionally
+        /// suppresses non-payers when "MultiplierRecompute.GateOverlayOnRecordedWin" is on. Returns null if the
+        /// recorded outcome cannot be read for this spin, so the caller FAILS OPEN (treats occurrences as paid)
+        /// rather than dimming or hiding a win we merely failed to parse. An empty (non-null) gate is different: it
+        /// means the spin genuinely recorded no paying located scatter, so nothing is matched.
         /// </summary>
         private static RecordedOverlayGate ResolveRecordedOverlayGate(
             SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx, ISlotRoundReader slotRoundReader)
@@ -728,9 +735,13 @@ namespace GameHistory.Controllers
                         foreach (var floorItem in reelItem.Floors)
                         {
                             string symbolName = floorItem?.SymbolName;
+                            // Only PAID-class symbols may claim a recorded located-scatter win. A statically
+                            // unpaid (TB) symbol has the same computed amount as its equal-value paid sibling, so
+                            // letting it match would let it steal that sibling's win (and mis-style both). TB is
+                            // always "did not pay"; its style is decided by the flag alone, not the gate.
                             if (!string.IsNullOrEmpty(symbolName)
                                 && ctx.Mapping.TryGet(symbolName, out var p)
-                                && ctx.InScope(p)
+                                && p.Paid
                                 && ctx.Computed.TryGetValue(symbolName, out var amount))
                             {
                                 if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
@@ -847,29 +858,46 @@ namespace GameHistory.Controllers
                 }
             }
 
-            // Recorded-outcome gate (global "MultiplierRecompute.GateOverlayOnRecordedWin"). When on and the gate was
-            // successfully read (non-null), overlay only where this spin's recorded located-scatter outcome confirms
-            // the win; every other in-scope occurrence renders plain. A null gate means the outcome could not be read
-            // -> fail open (fall through and show the computed value) rather than hide a possibly-real win.
-            if (ctx.GateOnRecordedWin && recordedGate != null)
+            // Did THIS occurrence pay this spin? A statically-unpaid (TB) symbol never does. A paid-class symbol
+            // does when the recorded located-scatter outcome confirms it (its cell, or its group for a "once"
+            // placement, was matched by ResolveRecordedOverlayGate). A null gate means the outcome could not be
+            // read -> fail open: treat as paid (paid look, and never suppressed) rather than dim/hide a possibly
+            // -real win.
+            bool paidThisSpin;
+            if (recordedGate == null)
             {
-                bool paidThisSpin = (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
-                    ? recordedGate.MatchedOnceGroups.Contains(p.GroupName ?? symbolName)
-                    : recordedGate.MatchedCells.Contains(new GridCell(reelIndex, floorIndex));
-                if (!paidThisSpin)
-                {
-                    return "<img src=\"" + symbolUrl + "\" >";
-                }
+                paidThisSpin = true;
             }
+            else if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+            {
+                paidThisSpin = p.Paid && recordedGate.MatchedOnceGroups.Contains(p.GroupName ?? symbolName);
+            }
+            else
+            {
+                paidThisSpin = p.Paid && recordedGate.MatchedCells.Contains(new GridCell(reelIndex, floorIndex));
+            }
+
+            // Recorded-outcome gate (global "MultiplierRecompute.GateOverlayOnRecordedWin"). When ON, a non-paying
+            // occurrence is suppressed entirely (plain image) and only payers render — so the unpaid style is never
+            // reached in this mode. When OFF, nothing is suppressed here: both payers and non-payers render, and are
+            // told apart below by the paid vs unpaid style.
+            if (ctx.GateOnRecordedWin && !paidThisSpin)
+            {
+                return "<img src=\"" + symbolUrl + "\" >";
+            }
+
+            // Pick the render style by whether this occurrence paid. Both styles are fully resolved on the params
+            // (unpaid falls back to paid unless the config supplied a distinct unpaid delta), so an un-styled config
+            // yields the historical look for every tile.
+            RenderStyle style = paidThisSpin ? p.PaidStyle : p.UnpaidStyle;
 
             string text = HttpUtility.HtmlEncode(FormatOverlayAmount(amount));
             var sb = new StringBuilder();
             sb.Append("<span style=\"position:relative; display:inline-block; line-height:0;\">");
             sb.Append("<img src=\"").Append(symbolUrl).Append("\" >");
-            sb.Append("<span style=\"position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); ")
-              .Append("font-family:Arial,Helvetica,sans-serif; font-weight:bold; font-size:18px; ")
-              .Append("color:#FFFFFF; text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 3px #000; ")
-              .Append("white-space:nowrap; pointer-events:none;\">");
+            sb.Append("<span style=\"position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); ");
+            style.AppendCss(sb);
+            sb.Append("white-space:nowrap; pointer-events:none;\">");
             sb.Append(text);
             sb.Append("</span></span>");
             return sb.ToString();
