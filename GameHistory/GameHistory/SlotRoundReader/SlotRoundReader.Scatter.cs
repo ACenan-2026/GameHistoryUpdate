@@ -1,33 +1,18 @@
-﻿using GameHistory.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
-
 namespace GameHistory.MultiplierRecompute
 {
-    public interface ISlotRoundReader
+    /// <summary>
+    /// <see cref="SlotRoundReader"/> — reads the recorded scatter-win amounts out of each spin's semi-structured,
+    /// "&lt;br/&gt;"-delimited Details string. This is the single owner of that fragile parse. The plain model
+    /// accessors live in the sibling partial, SlotRoundReader.Getters.cs.
+    /// </summary>
+    public partial class SlotRoundReader
     {
-        /// <summary>
-        /// Returns a mapping of multiplier symbol codes to their associated parameters.
-        /// </summary>
-        decimal? GetTotalBet();
-        List<List<decimal>> GetScatterWins();
-        List<decimal> GetOneSpinScatterWins(string details);
-        decimal GetScatterWinsTotal();
-
-        List<SlotUserPositionKeyValuePair> GetUserPositionDict();
-        List<GameHistorySlotPositionDetailModel> GetSlotDetails();
-        GameHistoryGameInfoSlotModel GetSlotModel();
-        string GetGameName();
-
-    }
-
-    public partial class SlotRoundReader : ISlotRoundReader
-    {
-        // The delimiters used to parse the Details field in the game history data. Fragile if the format of the Details field changes,
-        // but this is the expected format based on current data.
-        static readonly string DetailsSpinDelimiter= "<br/>";
+        // The delimiters used to parse the Details field in the game history data. Fragile if the format of the
+        // Details field changes, but this is the expected format based on current data.
+        static readonly string DetailsSpinDelimiter = "<br/>";
         static readonly char DetailsFieldDelimiter = ',';
         static readonly char DetailsKeyValueDelimiter = ':';
 
@@ -42,19 +27,10 @@ namespace GameHistory.MultiplierRecompute
         internal static bool IsScatterWinCategory(string type) =>
             !string.IsNullOrEmpty(type) && sScatterWinCategories.Contains(type);
 
-        private readonly GameHistoryGameInfoModel _gameInfo;
-        public SlotRoundReader(GameHistoryGameInfoModel gameInfo)
-        {
-            _gameInfo = gameInfo;
-        }
-        public decimal? GetTotalBet()
-        {
-            return ComputationHelpers.TryParseMoney(_gameInfo?.GameHistoryGameInfoSlotModel?.Bet, out decimal totalBet) ? totalBet : (decimal?)null;
-        }
-
         /// <summary>
-        /// Retrieves a list of scatter wins from the game history. Each inner list corresponds to a single spin and contains the amounts of all scatter wins for that spin. 
-        /// If a spin has no scatter wins, the corresponding inner list will be empty.
+        /// Retrieves a list of scatter wins from the game history. Each inner list corresponds to a single spin and
+        /// contains the amounts of all scatter wins for that spin. If a spin has no scatter wins, the corresponding
+        /// inner list will be empty.
         /// </summary>
         /// <returns>A list of lists containing scatter win amounts.</returns>
         public List<List<decimal>> GetScatterWins()
@@ -93,7 +69,6 @@ namespace GameHistory.MultiplierRecompute
                 {
                     scatterWins.Add(winAmount.Value);
                 }
-                
             }
             return scatterWins.Where(d => d != 0m).ToList();
         }
@@ -113,12 +88,13 @@ namespace GameHistory.MultiplierRecompute
                 string val = pair[1].Trim();
                 if (key.Equals("Type", System.StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!sScatterWinCategories.Contains(val))
+                    if (!IsScatterWinCategory(val))
                     {
                         return null; // Not an allowed win type, skip this entry
                     }
                     validType = true;
-                } else if (key.Equals("WinAmount", System.StringComparison.OrdinalIgnoreCase))
+                }
+                else if (key.Equals("WinAmount", System.StringComparison.OrdinalIgnoreCase))
                 {
                     if (!ComputationHelpers.TryParseMoney(val, out amount))
                     {
@@ -138,27 +114,6 @@ namespace GameHistory.MultiplierRecompute
         {
             var allWins = GetScatterWins();
             return allWins.SelectMany(row => row).Sum();
-        }
-
-
-        public List<SlotUserPositionKeyValuePair> GetUserPositionDict()
-        {
-            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotUserPositionDict;
-        }
-
-        public List<GameHistorySlotPositionDetailModel> GetSlotDetails()
-        {
-            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
-        }
-
-        public GameHistoryGameInfoSlotModel GetSlotModel()
-        {
-            return _gameInfo?.GameHistoryGameInfoSlotModel;
-        }
-
-        public string GetGameName()
-        {
-            return GetSlotModel()?.GameName;
         }
     }
 }
