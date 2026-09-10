@@ -14,33 +14,39 @@
   </agtReels>
 	<GameHistoryConfig gameName="LaughingDragon">
 		<multiplierGroups>
-			<group name="LocatedScatter" strategy="TotalBet">
+			<!-- 'paid' is a GROUP-level attribute, so the paying (B) and non-paying (TB) scatters are split into two
+				     groups, both using the TotalBet strategy. No renderStyle here: every tile keeps the historical default
+				     overlay look (white, bold, 18px, black outline). Add a <renderStyle> to a group to style it - see
+				     NorseLegend for a worked paid/unpaid/never-pay example. -->
+				<group name="LocatedScatterPaid" strategy="TotalBet" paid="true">
 				<!--  Paid multipliers  -->
-				<symbol name="B01" value="1" paid="true"/>
-				<symbol name="B02" value="2" paid="true"/>
-				<symbol name="B03" value="3" paid="true"/>
-				<symbol name="B05" value="5" paid="true"/>
-				<symbol name="B10" value="10" paid="true"/>
-				<symbol name="B12" value="12" paid="true"/>
-				<symbol name="B15" value="15" paid="true"/>
-				<symbol name="B20" value="20" paid="true"/>
-				<symbol name="B25" value="25" paid="true"/>
-				<symbol name="B50" value="50" paid="true"/>
-				<symbol name="B100" value="100" paid="true"/>
-				<!--  Present but not paid  -->
-				<symbol name="TB01" value="1" paid="false"/>
-				<symbol name="TB02" value="2" paid="false"/>
-				<symbol name="TB03" value="3" paid="false"/>
-				<symbol name="TB05" value="5" paid="false"/>
-				<symbol name="TB10" value="10" paid="false"/>
-				<symbol name="TB12" value="12" paid="false"/>
-				<symbol name="TB15" value="15" paid="false"/>
-				<symbol name="TB20" value="20" paid="false"/>
-				<symbol name="TB25" value="25" paid="false"/>
-				<symbol name="TB50" value="50" paid="false"/>
-				<symbol name="TB100" value="100" paid="false"/>
-				<symbol name="TB150" value="150" paid="false"/>
-				<symbol name="TB200" value="200" paid="false"/>
+				<symbol name="B01" value="1"/>
+				<symbol name="B02" value="2"/>
+				<symbol name="B03" value="3"/>
+				<symbol name="B05" value="5"/>
+				<symbol name="B10" value="10"/>
+				<symbol name="B12" value="12"/>
+				<symbol name="B15" value="15"/>
+				<symbol name="B20" value="20"/>
+				<symbol name="B25" value="25"/>
+				<symbol name="B50" value="50"/>
+				<symbol name="B100" value="100"/>
+				</group>
+				<group name="LocatedScatterNeverPay" strategy="TotalBet" paid="false">
+					<!--  Present but not paid  -->
+				<symbol name="TB01" value="1"/>
+				<symbol name="TB02" value="2"/>
+				<symbol name="TB03" value="3"/>
+				<symbol name="TB05" value="5"/>
+				<symbol name="TB10" value="10"/>
+				<symbol name="TB12" value="12"/>
+				<symbol name="TB15" value="15"/>
+				<symbol name="TB20" value="20"/>
+				<symbol name="TB25" value="25"/>
+				<symbol name="TB50" value="50"/>
+				<symbol name="TB100" value="100"/>
+				<symbol name="TB150" value="150"/>
+				<symbol name="TB200" value="200"/>
 			</group>
 		</multiplierGroups>
 	</GameHistoryConfig>
