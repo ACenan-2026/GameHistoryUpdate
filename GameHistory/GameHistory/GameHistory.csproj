@@ -132,7 +132,9 @@
     <Compile Include="Models\SlotSymbolReelViewModel.cs" />
     <Compile Include="Models\SlotSymbolTableViewModel.cs" />
     <Compile Include="Models\SlotSymbolViewModel.cs" />
-    <Compile Include="MultiplierRecompute\SlotRoundReader.cs" />
+    <Compile Include="SlotRoundReader\ISlotRoundReader.cs" />
+    <Compile Include="SlotRoundReader\SlotRoundReader.Getters.cs" />
+    <Compile Include="SlotRoundReader\SlotRoundReader.Scatter.cs" />
     <Compile Include="MultiplierRecompute\WonAmountComputation.cs" />
     <Compile Include="MultiplierRecompute\MultiplierConfigParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
