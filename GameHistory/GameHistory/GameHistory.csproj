@@ -132,6 +132,7 @@
     <Compile Include="Models\SlotSymbolReelViewModel.cs" />
     <Compile Include="Models\SlotSymbolTableViewModel.cs" />
     <Compile Include="Models\SlotSymbolViewModel.cs" />
+    <Compile Include="MultiplierRecompute\SlotRoundReader.cs" />
     <Compile Include="MultiplierRecompute\WonAmountComputation.cs" />
     <Compile Include="MultiplierRecompute\MultiplierConfigParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

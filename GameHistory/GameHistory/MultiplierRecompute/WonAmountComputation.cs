@@ -11,10 +11,10 @@ namespace GameHistory.MultiplierRecompute
 
         public WonAmountsComputer(IMultiplierConfigParser configParser) => _configParser = configParser;
 
-        public IReadOnlyDictionary<string, decimal> ComputeScatterAmounts(GameHistoryGameInfoModel gameInfo)
+        public IReadOnlyDictionary<string, decimal> ComputeScatterAmounts(SlotRoundReader slotRoundReader)
         {
             var results = new Dictionary<string, decimal>();
-            var slot = gameInfo?.GameHistoryGameInfoSlotModel;
+            var slot = slotRoundReader.GetSlotModel();
             if (slot == null) return results;
 
             var mapping = _configParser.GetMultiplierParams();
@@ -26,7 +26,7 @@ namespace GameHistory.MultiplierRecompute
                 var strategy = MultiplierBaseStrategyResolver.Resolve(p.Strategy?.Type, p.Strategy?.Attributes);
                 if (strategy == null) { sLog.WarnFormat("No strategy '{0}' for symbol '{1}'.", p.Strategy?.Type, entry.Key); continue; }
 
-                var wonAmountVal = strategy.GetWonAmount(gameInfo, p);
+                var wonAmountVal = strategy.GetWonAmount(slotRoundReader, p);
 
                 if (wonAmountVal == null) continue;        // wonAmount unknown -> no overlay for this symbol
                 results[entry.Key] = wonAmountVal.Value;

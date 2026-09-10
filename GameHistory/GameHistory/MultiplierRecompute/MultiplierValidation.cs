@@ -31,21 +31,20 @@ namespace GameHistory.MultiplierRecompute
         /// discrepancies (also logged); the result is returned mainly for testing and for callers that want to act.
         /// </summary>
         public MultiplierValidationResult ValidateRound(
-            GameHistoryGameInfoModel gameInfo,
+            SlotRoundReader slotRoundReader,
             MultiplierSymbolMapping mapping,
             IReadOnlyDictionary<string, decimal> computedBySymbol)
         {
             var result = new MultiplierValidationResult();
 
-            var slotPositions = gameInfo?.UserPositions?.SlotUsersPositionsAndDetails;
-            var grids = slotPositions?.SlotUserPositionDict;
-            var details = slotPositions?.SlotDetails?.SlotDetails;
+            var grids = slotRoundReader.GetUserPositionDict();
+            var details = slotRoundReader.GetSlotDetails();
             if (grids == null || details == null || mapping == null || computedBySymbol == null)
             {
                 return result;
             }
 
-            string gameName = gameInfo.GameHistoryGameInfoSlotModel?.GameName ?? "(unknown game)";
+            string gameName = slotRoundReader.GetGameName() ?? "(unknown game)";
 
             int spinCount = Math.Min(grids.Count, details.Count);
             if (grids.Count != details.Count)
@@ -54,6 +53,8 @@ namespace GameHistory.MultiplierRecompute
                     "Game '{0}': grid spin count ({1}) does not match detail spin count ({2}); validating the first {3}.",
                     gameName, grids.Count, details.Count, spinCount);
             }
+
+            var allScatterWins = slotRoundReader.GetScatterWins();
 
             for (int i = 0; i < spinCount; i++)
             {

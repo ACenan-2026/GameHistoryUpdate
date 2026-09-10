@@ -65,7 +65,7 @@ namespace GameHistory.MultiplierRecompute
     /// </summary>
     public interface IMultiplierBaseStrategy
     {
-        decimal? GetWonAmount(GameHistoryGameInfoModel gameInfo, MultiplierParams multiplierParams);
+        decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams);
     }
 
 
@@ -80,10 +80,8 @@ namespace GameHistory.MultiplierRecompute
         /// </summary>
         public static readonly TotalBetStrategy Instance = new TotalBetStrategy();
 
-        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfoSlotModel, MultiplierParams multiplierParams) =>
-            ComputationHelpers.TryParseMoney(gameInfoSlotModel?.GameHistoryGameInfoSlotModel?.Bet, out decimal totalBet) 
-            ? totalBet * multiplierParams.Multiplier 
-            : (decimal?)null;
+        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
+            slotRoundReader.GetTotalBet() * multiplierParams.Multiplier;
     }
 
     /// <summary>
@@ -107,9 +105,9 @@ namespace GameHistory.MultiplierRecompute
             _denominator = denominator;
         }
 
-        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfoSlotModel, MultiplierParams multiplierParams) =>
-            ComputationHelpers.TryParseMoney(gameInfoSlotModel?.GameHistoryGameInfoSlotModel?.Bet, out var totalBet) 
-                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier    
+        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
+            slotRoundReader.GetTotalBet() is decimal totalBet
+                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
                 : (decimal?)null;
     }
 
@@ -137,10 +135,7 @@ namespace GameHistory.MultiplierRecompute
     {
         /// <summary>Shared stateless instance — the strategy reads only the recorded outcome.</summary>
         public static readonly TotalScatterWinStrategy Instance = new TotalScatterWinStrategy();
-
-        private static readonly string[] DetailLineSeparator = { "<br/>" };
-
-        public decimal? GetWonAmount(GameHistoryGameInfoModel gameInfo, MultiplierParams multiplierParams)
+        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams)
         {
             // Overlay ONLY a paying scatter-kind win. A spin can show a multiplier symbol without the wheel
             // feature triggering — e.g. only a payline win, with no paying scatter. The Details entries
@@ -149,58 +144,8 @@ namespace GameHistory.MultiplierRecompute
             // a payline win is ignored and we return null → the Wh tile renders plain rather than greedily showing
             // an unrelated win. Do NOT fall back to the round's total Won: that total includes payline wins and
             // would be painted onto an uninvolved tile.
-            return TryGetRecordedLocatedWon(gameInfo, out decimal located) ? located : (decimal?)null;
-        }
-
-        /// <summary>
-        /// Sums the located-scatter WinAmounts recorded across the round's spin Details. Returns false
-        /// when none are present. Under the single-pay assumption this is a single amount.
-        /// </summary>
-        private static bool TryGetRecordedLocatedWon(GameHistoryGameInfoModel gameInfo, out decimal total)
-        {
-            total = 0m;
-            var details = gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
-            if (details == null) return false;
-
-            bool found = false;
-            foreach (var spin in details)
-            {
-                if (string.IsNullOrEmpty(spin?.Details)) continue;
-
-                foreach (var line in spin.Details.Split(DetailLineSeparator, System.StringSplitOptions.RemoveEmptyEntries))
-                {
-                    if (TryGetLocatedScatterAmount(line, out decimal amount))
-                    {
-                        total += amount;
-                        found = true;
-                    }
-                }
-            }
-            return found;
-        }
-
-        /// <summary>
-        /// Parses one "key: value,key: value,…" Details line; returns true with the amount when it is a
-        /// scatter-kind entry (by its "Type") carrying a numeric WinAmount — i.e. the entry that actually paid.
-        /// </summary>
-        private static bool TryGetLocatedScatterAmount(string line, out decimal amount)
-        {
-            amount = 0m;
-            string winType = null;
-            string winAmount = null;
-
-            foreach (var part in line.Split(','))
-            {
-                int idx = part.IndexOf(':');
-                if (idx <= 0) continue;
-                string key = part.Substring(0, idx).Trim();
-                string val = part.Substring(idx + 1).Trim();
-                if (key.Equals("Type", System.StringComparison.OrdinalIgnoreCase)) winType = val;
-                else if (key.Equals("WinAmount", System.StringComparison.OrdinalIgnoreCase)) winAmount = val;
-            }
-
-            return ComputationHelpers.IsScatterWinCategory(winType)
-                && ComputationHelpers.TryParseMoney(winAmount, out amount);
+            var total = slotRoundReader.GetScatterWinsTotal();
+            return total > 0m ? total : (decimal?)null;
         }
     }
 
