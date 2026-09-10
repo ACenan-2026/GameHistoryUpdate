@@ -42,10 +42,12 @@ namespace GameHistory.MultiplierRecompute
     /// <summary>
     /// Represents the parameters associated with a multiplier symbol, including its multiplier value,
     /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
-    /// <see cref="GroupName"/>, <see cref="Placement"/>, <see cref="PaidStyle"/> and <see cref="UnpaidStyle"/>
-    /// are group-level display settings shared by every symbol in the same <group>; <see cref="Placement"/>
-    /// decides how many occurrences are overlaid and <see cref="GroupName"/> lets the "once" placement dedupe
-    /// across all members of a group (which may carry different codes, e.g. Wh / Wh2 / Wh3).
+    /// <see cref="Paid"/>, <see cref="GroupName"/>, <see cref="Placement"/>, <see cref="PaidStyle"/> and
+    /// <see cref="UnpaidStyle"/> are group-level settings shared by every symbol in the same <group>: a group is
+    /// wholly paying or wholly non-paying, so <see cref="Paid"/> comes from the group's "paid" attribute rather
+    /// than the symbol's. <see cref="Placement"/> decides how many occurrences are overlaid and
+    /// <see cref="GroupName"/> lets the "once" placement dedupe across all members of a group (which may carry
+    /// different codes, e.g. Wh / Wh2 / Wh3).
     /// <see cref="PaidStyle"/> is the overlay look for an occurrence that paid this spin; <see cref="UnpaidStyle"/>
     /// is the look for one that did not (a statically-unpaid symbol, or a paid-class symbol whose spin did not
     /// meet the trigger). Both are fully resolved (no null fields) so the render loop can emit them directly.
@@ -165,6 +167,13 @@ namespace GameHistory.MultiplierRecompute
 
                 MultiplierOverlayPlacement placement = ParsePlacement(groupElement.Attribute("overlay")?.Value, groupName);
 
+                // Paid is a GROUP-level property: every symbol in a group shares one paid status, so a group is
+                // either wholly paying (B) or wholly non-paying (TB). This enforces that paid and unpaid symbols
+                // live in separate groups, which in turn lets each carry its own render style. A missing 'paid'
+                // attribute defaults to false (non-paying) and is warned, so a forgotten flag fails safe rather
+                // than silently promoting symbols to the paid style.
+                bool groupPaid = ParseGroupPaid(groupElement, groupName);
+
                 ParseGroupStyles(groupElement, groupName, out RenderStyle paidStyleDelta, out RenderStyle unpaidStyleDelta);
 
                 foreach (var symbolElement in groupElement.Elements("symbol"))
@@ -175,10 +184,14 @@ namespace GameHistory.MultiplierRecompute
                         sLog.WarnFormat("Skipping a symbol with a missing 'name' attribute in multiplier group '{0}'.", groupName);
                         continue;
                     }
-                    int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1000000007;        // if your multiplier is 109, you are probably missing a value attribute in the XML
-                    bool paid = bool.TryParse(symbolElement.Attribute("paid")?.Value, out var p) && p;
 
-                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, paid, spec, groupName, placement, paidStyleDelta, unpaidStyleDelta)))
+                    if (symbolElement.Attribute("paid") != null)
+                    {
+                        sLog.WarnFormat("Symbol '{0}' in group '{1}' has a per-symbol 'paid' attribute; it is ignored — 'paid' is now set on the <group>.", symbol, groupName);
+                    }
+                    int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1000000007;        // if your multiplier is 109, you are probably missing a value attribute in the XML
+
+                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, paidStyleDelta, unpaidStyleDelta)))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
                     }
@@ -210,6 +223,24 @@ namespace GameHistory.MultiplierRecompute
                     sLog.WarnFormat("Multiplier group '{0}' has unrecognised overlay '{1}'; defaulting to 'all'.", groupName, raw);
                     return MultiplierOverlayPlacement.All;
             }
+        }
+
+        /// <summary>
+        /// Reads the group-level "paid" attribute. A group is wholly paying (true) or wholly non-paying (false),
+        /// which enforces that paid (B) and unpaid (TB) symbols live in separate groups. Absent or unparseable
+        /// defaults to false and is warned, so a group that forgot the flag renders its symbols in the non-paying
+        /// (unpaid) style rather than being silently promoted to the paid style.
+        /// </summary>
+        private static bool ParseGroupPaid(XElement groupElement, string groupName)
+        {
+            string raw = groupElement.Attribute("paid")?.Value;
+            if (bool.TryParse(raw, out bool paid))
+            {
+                return paid;
+            }
+
+            sLog.WarnFormat("Multiplier group '{0}' has no valid group-level 'paid' attribute ('{1}'); defaulting to false (non-paying).", groupName, raw ?? "(absent)");
+            return false;
         }
 
         /// <summary>
