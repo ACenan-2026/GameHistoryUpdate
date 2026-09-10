@@ -15,7 +15,7 @@ namespace GameHistory.MultiplierRecompute
     ///    specify a base style and a <c>state="unpaid"</c> block override only the fields that differ
     ///    (e.g. just <see cref="Color"/>).
     ///  - <see cref="Default"/> reproduces the historical hard-coded overlay look, so a config with no
-    ///    &lt;renderStyle&gt; renders exactly as before.
+    ///    <renderStyle> renders exactly as before.
     ///  - Adding a property later (e.g. an outline WIDTH, italic, opacity) is a localised change: add one
     ///    nullable field, one parse+validate line in <see cref="Parse"/>, and one emit line in
     ///    <see cref="AppendCss"/> (an outline width would only touch <see cref="AppendOutline"/>). Merge and

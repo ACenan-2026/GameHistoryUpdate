@@ -5,7 +5,8 @@ namespace GameHistory.MultiplierRecompute
 {
     /// <summary>
     /// <see cref="SlotRoundReader"/> — reads the recorded scatter-win amounts out of each spin's semi-structured,
-    /// "&lt;br/&gt;"-delimited Details string. This is the single owner of that fragile parse. The plain model
+    /// "
+    /// br/>"-delimited Details string. This is the single owner of that fragile parse. The plain model
     /// accessors live in the sibling partial, SlotRoundReader.Getters.cs.
     /// </summary>
     public partial class SlotRoundReader

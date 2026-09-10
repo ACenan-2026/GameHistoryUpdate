@@ -43,7 +43,7 @@ namespace GameHistory.MultiplierRecompute
     /// Represents the parameters associated with a multiplier symbol, including its multiplier value,
     /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
     /// <see cref="GroupName"/>, <see cref="Placement"/>, <see cref="PaidStyle"/> and <see cref="UnpaidStyle"/>
-    /// are group-level display settings shared by every symbol in the same &lt;group&gt;; <see cref="Placement"/>
+    /// are group-level display settings shared by every symbol in the same <group>; <see cref="Placement"/>
     /// decides how many occurrences are overlaid and <see cref="GroupName"/> lets the "once" placement dedupe
     /// across all members of a group (which may carry different codes, e.g. Wh / Wh2 / Wh3).
     /// <see cref="PaidStyle"/> is the overlay look for an occurrence that paid this spin; <see cref="UnpaidStyle"/>
@@ -114,8 +114,9 @@ namespace GameHistory.MultiplierRecompute
     {
         /// <summary>
         /// Parses the multiplier configuration XML and returns a mapping of symbols to their corresponding multiplier parameters.
-        /// Returns a MultiplierSymbolMapping object containing the mappings currently detailing the multiplier value, strategy type, 
-        /// and whether the symbol is paid or not.
+        /// Returns a MultiplierSymbolMapping object whose entries detail the multiplier value, strategy type, whether the
+        /// symbol is paid, and the group-level display settings (overlay placement, and the resolved paid/unpaid render
+        /// styles - see <see cref="MultiplierParams"/>).
         /// If the XML structure is invalid or missing required attributes, those entries will be skipped.
         /// 
         /// Consider reading the corresponding documentation to understand the expected XML schema and attributes for proper configuration.
@@ -212,11 +213,11 @@ namespace GameHistory.MultiplierRecompute
         }
 
         /// <summary>
-        /// Reads a group's optional &lt;renderStyle&gt; children into two style DELTAS: the base/paid look
-        /// (a &lt;renderStyle&gt; with no <c>state</c>, or <c>state="paid"</c>) and the unpaid look
+        /// Reads a group's optional <renderStyle> children into two style DELTAS: the base/paid look
+        /// (a <renderStyle> with no <c>state</c>, or <c>state="paid"</c>) and the unpaid look
         /// (<c>state="unpaid"</c>). Both are returned as sparse deltas (unset attributes are null); the
         /// concrete styles are resolved later in <see cref="MultiplierParams"/> (paid over the code default,
-        /// unpaid over paid). A group with no &lt;renderStyle&gt; yields empty deltas, i.e. the historical look.
+        /// unpaid over paid). A group with no <renderStyle> yields empty deltas, i.e. the historical look.
         /// First definition wins if a state is declared more than once, matching the symbol first-wins rule.
         /// </summary>
         private static void ParseGroupStyles(XElement groupElement, string groupName, out RenderStyle paidDelta, out RenderStyle unpaidDelta)
