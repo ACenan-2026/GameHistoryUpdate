@@ -143,17 +143,17 @@ namespace GameHistory.MultiplierRecompute
 
         public List<SlotUserPositionKeyValuePair> GetUserPositionDict()
         {
-            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotUserPositionDict ?? null;
+            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotUserPositionDict;
         }
 
         public List<GameHistorySlotPositionDetailModel> GetSlotDetails()
         {
-            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails ?? null;
+            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
         }
 
         public GameHistoryGameInfoSlotModel GetSlotModel()
         {
-            return _gameInfo?.GameHistoryGameInfoSlotModel ?? null;
+            return _gameInfo?.GameHistoryGameInfoSlotModel;
         }
 
         public string GetGameName()

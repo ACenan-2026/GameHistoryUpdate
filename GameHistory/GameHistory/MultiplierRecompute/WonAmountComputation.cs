@@ -11,7 +11,7 @@ namespace GameHistory.MultiplierRecompute
 
         public WonAmountsComputer(IMultiplierConfigParser configParser) => _configParser = configParser;
 
-        public IReadOnlyDictionary<string, decimal> ComputeScatterAmounts(SlotRoundReader slotRoundReader)
+        public IReadOnlyDictionary<string, decimal> ComputeScatterAmounts(ISlotRoundReader slotRoundReader)
         {
             var results = new Dictionary<string, decimal>();
             var slot = slotRoundReader.GetSlotModel();

@@ -271,7 +271,7 @@ namespace GameHistory.Controllers
                             // off or the outcome could not be read => the tile builder shows the computed value.
                             RecordedOverlayGate recordedGate =
                                 (multiplierCtx != null && multiplierCtx.GateOnRecordedWin)
-                                    ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx)
+                                    ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx, slotRoundReader)
                                     : null;
 
                             int reelIdx = 0;
@@ -551,7 +551,7 @@ namespace GameHistory.Controllers
         /// Overlay scope is controlled by "MultiplierRecompute.OverlayIncludesUnpaid": false (default) overlays
         /// only paid (B) located-scatter multipliers; true also overlays unpaid (TB) ones.
         /// </summary>
-        private MultiplierOverlayContext PrepareMultiplierData(SlotRoundReader slotRoundReader)
+        private MultiplierOverlayContext PrepareMultiplierData(ISlotRoundReader slotRoundReader)
         {
             try
             {
@@ -707,13 +707,14 @@ namespace GameHistory.Controllers
         /// it means the spin genuinely recorded no paying located scatter, so nothing is overlaid.
         /// </summary>
         private static RecordedOverlayGate ResolveRecordedOverlayGate(
-            SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx)
+            SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx, ISlotRoundReader slotRoundReader)
         {
             if (ctx == null || spin?.Reels == null) return null;
             try
             {
-                // Non-paying located scatters record 0; drop them so they are not match targets.
-                var pool = RecordedLocatedScatterReader.Parse(spinDetails).Where(a => a != 0m).ToList();
+                // Recorded located-scatter wins for this spin, read through the single reader. The reader already
+                // drops non-paying zero markers, so these are all real amounts and valid match targets.
+                var pool = slotRoundReader.GetOneSpinScatterWins(spinDetails);
 
                 var gate = new RecordedOverlayGate();
                 HashSet<string> onceSeen = null;

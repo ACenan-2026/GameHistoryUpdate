@@ -22,35 +22,6 @@ namespace GameHistory.MultiplierRecompute
 
             return decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
         }
-
-        /// <summary>
-        /// The recorded Details "Type" tokens that denote a scatter-kind win — the same field paylines are read
-        /// from ("Type: Payline"), so scatter wins and payline wins are told apart by ONE consistent field. This is
-        /// the code-owned mapping from the domain concept "a scatter/feature win entry" to the concrete persistence
-        /// tokens that realise it, so game config never has to name a database token; recognised spellings are
-        /// collected HERE, in one place, with room for alternatives not yet observed.
-        ///
-        /// Why "Type" and not "ScatterType": across real records the Type field is the stable, consistent
-        /// discriminator (only "Basic_Scatter" / "Payline" seen), whereas ScatterType is not — Eagle Dollar records
-        /// its feature win as "LocatedScatter" but Reel Hot 7s records its as "NormalScatter", and Eagle also emits
-        /// "NormalScatter" entries that are mere symbol-presence markers. The entry that actually PAID is isolated by
-        /// a non-empty WinAmount, which callers require in addition to this category check.
-        ///
-        /// ASSUMES that for a game which opts into a recorded-outcome strategy, the round's paying scatter entry IS
-        /// the feature win (no unrelated ordinary-scatter pay carrying a WinAmount that should not be counted). This
-        /// is coarser than isolating by ScatterType, but that precision is not available anyway once a feature win
-        /// can be a "NormalScatter". The Phase 1 validator surfaces a violation as an unexplained-recorded WARN.
-        /// </summary>
-        private static readonly HashSet<string> sScatterWinCategories =
-            new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "Basic_Scatter" };
-
-        /// <summary>
-        /// True when a Details entry's "Type" denotes a scatter-kind win (see <see cref="sScatterWinCategories"/>).
-        /// Callers pair this with a numeric WinAmount to isolate the entry that actually paid from non-paying
-        /// scatter markers and from payline wins.
-        /// </summary>
-        internal static bool IsScatterWinCategory(string type) =>
-            !string.IsNullOrEmpty(type) && sScatterWinCategories.Contains(type);
     }
 
 
@@ -65,7 +36,7 @@ namespace GameHistory.MultiplierRecompute
     /// </summary>
     public interface IMultiplierBaseStrategy
     {
-        decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams);
+        decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams);
     }
 
 
@@ -80,7 +51,7 @@ namespace GameHistory.MultiplierRecompute
         /// </summary>
         public static readonly TotalBetStrategy Instance = new TotalBetStrategy();
 
-        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
+        public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
             slotRoundReader.GetTotalBet() * multiplierParams.Multiplier;
     }
 
@@ -105,7 +76,7 @@ namespace GameHistory.MultiplierRecompute
             _denominator = denominator;
         }
 
-        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
+        public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
             slotRoundReader.GetTotalBet() is decimal totalBet
                 ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
                 : (decimal?)null;
@@ -121,7 +92,7 @@ namespace GameHistory.MultiplierRecompute
     /// multiplier win from other wins: each Details entry carries a "Type" — a payline win is "Type: Payline",
     /// a scatter-kind win is "Type: Basic_Scatter" — and the entry that actually PAID carries a non-empty
     /// WinAmount. Which "Type" tokens count is a code-owned concern (see
-    /// <see cref="ComputationHelpers.IsScatterWinCategory"/>), so the game config never has to name a database
+    /// <see cref="SlotRoundReader.IsScatterWinCategory"/>), so the game config never has to name a database
     /// token. When no paying scatter win is recorded — e.g. a spin where the Wh symbol appeared but the wheel did
     /// not trigger and only a payline paid — it returns null so the tile renders plain rather than showing an
     /// unrelated win. It deliberately does NOT fall back to the round's total Won, which would include payline wins.
@@ -135,12 +106,12 @@ namespace GameHistory.MultiplierRecompute
     {
         /// <summary>Shared stateless instance — the strategy reads only the recorded outcome.</summary>
         public static readonly TotalScatterWinStrategy Instance = new TotalScatterWinStrategy();
-        public decimal? GetWonAmount(SlotRoundReader slotRoundReader, MultiplierParams multiplierParams)
+        public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams)
         {
             // Overlay ONLY a paying scatter-kind win. A spin can show a multiplier symbol without the wheel
             // feature triggering — e.g. only a payline win, with no paying scatter. The Details entries
             // distinguish these by "Type" (a payline win is "Type: Payline"; a scatter-kind win is
-            // "Type: Basic_Scatter" — see ComputationHelpers.IsScatterWinCategory) plus a non-empty WinAmount, so
+            // "Type: Basic_Scatter" — see SlotRoundReader.IsScatterWinCategory) plus a non-empty WinAmount, so
             // a payline win is ignored and we return null → the Wh tile renders plain rather than greedily showing
             // an unrelated win. Do NOT fall back to the round's total Won: that total includes payline wins and
             // would be painted onto an uninvolved tile.
