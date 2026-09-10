@@ -15,6 +15,15 @@
   <GameHistoryConfig gameName="NorseLegend">
     <multiplierGroups>
       <group name="LocatedScatter" strategy="TotalBet">
+        <!-- Overlay text style. The base (paid) look is optional: omit it and the historical default is used
+             (white, bold, 18px, black outline). The unpaid block is a DELTA over the paid look - it only needs
+             the attributes that differ - and applies to a scatter that did not pay this spin: a TB symbol, or a
+             paid-class B whose spin did not meet the trigger. The unpaid distinction is shown only when
+             recorded-outcome gating is off (MultiplierRecompute.GateOverlayOnRecordedWin = false); with gating
+             on, non-payers are hidden entirely. Attributes: color / outline = #RGB or #RRGGBB (outline also
+             accepts "none"); size = px; weight = normal | bold; font = family list. -->
+        <renderStyle color="#FFFFFF" font="Arial, Helvetica, sans-serif" size="18" weight="bold" outline="#000000"/>
+        <renderStyle state="unpaid" color="#9AA0A6" weight="normal"/>
       <!--  value = int1 * int2  (prefix * number-after-b)  -->
       <!--  Paid, no prefix (int1 = 1)  -->
         <symbol name="B01" value="1" paid="true"/>
