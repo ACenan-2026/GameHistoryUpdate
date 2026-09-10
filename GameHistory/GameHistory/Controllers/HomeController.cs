@@ -266,6 +266,14 @@ namespace GameHistory.Controllers
                             // plain. Empty for the common case of only "all" placement groups.
                             var onceOverlayCells = ResolveOnceOverlayCells(positionItem, multiplierCtx);
 
+                            // When recorded-outcome gating is on, resolve up-front which occurrences this spin
+                            // actually paid (matched against the recorded located-scatter wins). null when gating is
+                            // off or the outcome could not be read => the tile builder shows the computed value.
+                            RecordedOverlayGate recordedGate =
+                                (multiplierCtx != null && multiplierCtx.GateOnRecordedWin)
+                                    ? ResolveRecordedOverlayGate(positionItem, slotDetailsItem.Details, multiplierCtx)
+                                    : null;
+
                             int reelIdx = 0;
                             foreach (var reelItem in positionItem.Reels)
                             {
@@ -279,7 +287,7 @@ namespace GameHistory.Controllers
                                     string symbolUrl = Url.Content(floorItem.SymbolName.ToSlotSymbolUrl(gameName, platformType));
                                     // For a configured multiplier symbol the finalised amount is overlaid on the tile;
                                     // every other symbol renders exactly as before.
-                                    html += BuildMultiplierTile(symbolUrl, floorItem.SymbolName, multiplierCtx, reelIdx, floorIdx, onceOverlayCells);
+                                    html += BuildMultiplierTile(symbolUrl, floorItem.SymbolName, multiplierCtx, reelIdx, floorIdx, onceOverlayCells, recordedGate);
                                     html += "</tr>";
                                     html += "<br/>";
                                     floorIdx++;
@@ -514,8 +522,21 @@ namespace GameHistory.Controllers
         private sealed class MultiplierOverlayContext
         {
             public bool IncludeUnpaid { get; set; }
+            public bool GateOnRecordedWin { get; set; }
             public MultiplierSymbolMapping Mapping { get; set; }
             public IReadOnlyDictionary<string, decimal> Computed { get; set; }
+
+            /// <summary>
+            /// Whether a symbol's overlay is in scope for display. Paid (B) symbols always are. Unpaid (TB) symbols
+            /// are in scope only when <see cref="IncludeUnpaid"/> is set AND recorded-outcome gating is off. Under
+            /// gating the recorded outcome is the authority on what paid, and an unpaid symbol — which by definition
+            /// did not pay, and is indistinguishable BY AMOUNT from an equal-value paid symbol (both compute the same
+            /// base × value) — must never be an overlay candidate: otherwise, matched by amount in render order, it
+            /// could claim the recorded win of a paying symbol and leave that paying symbol rendered plain. So gating
+            /// makes <see cref="IncludeUnpaid"/> a deliberate no-op. Centralised here so every scope decision (tile
+            /// build, once-cell resolution, recorded-gate candidacy) agrees.
+            /// </summary>
+            public bool InScope(MultiplierParams p) => p.Paid || (IncludeUnpaid && !GateOnRecordedWin);
         }
 
         /// <summary>
@@ -597,11 +618,14 @@ namespace GameHistory.Controllers
                 // Phase 1 validation stays log-only; it never alters what the loop below renders.
                 new MultiplierComputationValidator().ValidateRound(slotRoundReader, mapping, computed);
 
+                // Web.Config GameHistory Settings
                 bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.OverlayIncludesUnpaid"], out bool includeUnpaid);
+                bool.TryParse(ConfigurationManager.AppSettings["MultiplierRecompute.GateOverlayOnRecordedWin"], out bool gateOnRecordedWin);
 
                 return new MultiplierOverlayContext
                 {
                     IncludeUnpaid = includeUnpaid,
+                    GateOnRecordedWin = gateOnRecordedWin,
                     Mapping = mapping,
                     Computed = computed
                 };
@@ -642,11 +666,103 @@ namespace GameHistory.Controllers
         /// A single grid position (reel/column index, floor/row index) within one spin. Used to pin a
         /// "once" placement overlay to exactly one cell.
         /// </summary>
-        private struct GridCell
+        private struct GridCell : IEquatable<GridCell>
         {
             public int Reel { get; }
             public int Floor { get; }
             public GridCell(int reel, int floor) { Reel = reel; Floor = floor; }
+
+            public bool Equals(GridCell other) => Reel == other.Reel && Floor == other.Floor;
+            public override bool Equals(object obj) => obj is GridCell other && Equals(other);
+            public override int GetHashCode() => (Reel * 397) ^ Floor;
+        }
+
+        /// <summary>
+        /// Per-spin outcome of matching computed multiplier amounts against the recorded located-scatter wins,
+        /// used only when <see cref="MultiplierOverlayContext.GateOnRecordedWin"/> is on. A NON-null (possibly empty)
+        /// instance means "the recorded outcome was read": occurrences not listed here did not pay and render plain.
+        /// A null gate (returned by <see cref="ResolveRecordedOverlayGate"/> on a read failure) means "could not be
+        /// determined" and callers FAIL OPEN — they show the computed value rather than hide a possibly-real win.
+        ///  - <see cref="MatchedCells"/>: "all" placement occurrences whose computed amount matched a recorded win.
+        ///  - <see cref="MatchedOnceGroups"/>: "once" placement groups that recorded a matching win this spin; the
+        ///    single displayed cell is still chosen by <see cref="ResolveOnceOverlayCells"/>.
+        /// </summary>
+        private sealed class RecordedOverlayGate
+        {
+            public HashSet<GridCell> MatchedCells { get; } = new HashSet<GridCell>();
+            public HashSet<string> MatchedOnceGroups { get; } = new HashSet<string>();
+        }
+
+        /// <summary>
+        /// Builds the per-spin recorded-outcome gate: decides which in-scope multiplier occurrences actually paid by
+        /// matching each occurrence's computed amount against the spin's recorded located-scatter wins as a MULTISET
+        /// — the very reconcile the Phase 1 validator does for logging, here promoted to a display decision. An
+        /// occurrence whose amount finds an as-yet-unclaimed recorded win is "matched" (overlay shown); the rest
+        /// render plain. The grid is walked in render order so duplicate amounts are consumed the same way the tiles
+        /// are drawn (a tie between two equal-amount cells resolves to the earlier one, matching how the loop paints).
+        /// Recorded zeros are not match targets (they are non-paying located scatters).
+        ///
+        /// Returns null if the recorded outcome cannot be read for this spin, so the caller FAILS OPEN (shows the
+        /// computed value) rather than hiding a win we merely failed to parse. An empty (non-null) gate is different:
+        /// it means the spin genuinely recorded no paying located scatter, so nothing is overlaid.
+        /// </summary>
+        private static RecordedOverlayGate ResolveRecordedOverlayGate(
+            SlotSymbolTableViewModel spin, string spinDetails, MultiplierOverlayContext ctx)
+        {
+            if (ctx == null || spin?.Reels == null) return null;
+            try
+            {
+                // Non-paying located scatters record 0; drop them so they are not match targets.
+                var pool = RecordedLocatedScatterReader.Parse(spinDetails).Where(a => a != 0m).ToList();
+
+                var gate = new RecordedOverlayGate();
+                HashSet<string> onceSeen = null;
+
+                int reelIdx = 0;
+                foreach (var reelItem in spin.Reels)
+                {
+                    int floorIdx = 0;
+                    if (reelItem?.Floors != null)
+                    {
+                        foreach (var floorItem in reelItem.Floors)
+                        {
+                            string symbolName = floorItem?.SymbolName;
+                            if (!string.IsNullOrEmpty(symbolName)
+                                && ctx.Mapping.TryGet(symbolName, out var p)
+                                && ctx.InScope(p)
+                                && ctx.Computed.TryGetValue(symbolName, out var amount))
+                            {
+                                if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+                                {
+                                    // One overlay per group per spin: consume the recorded win once for the group,
+                                    // not once per in-group tile, mirroring the validator's once-group dedup.
+                                    string groupKey = p.GroupName ?? symbolName;
+                                    if (onceSeen == null) onceSeen = new HashSet<string>();
+                                    if (onceSeen.Add(groupKey))
+                                    {
+                                        int gi = pool.IndexOf(amount);
+                                        if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedOnceGroups.Add(groupKey); }
+                                    }
+                                }
+                                else
+                                {
+                                    int gi = pool.IndexOf(amount);
+                                    if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedCells.Add(new GridCell(reelIdx, floorIdx)); }
+                                }
+                            }
+                            floorIdx++;
+                        }
+                    }
+                    reelIdx++;
+                }
+                return gate;
+            }
+            catch (Exception ex)
+            {
+                // A single unparseable spin must not hide overlays for the round; fail open.
+                sLog.WarnFormat("Recorded-outcome overlay gate failed for a spin (showing computed value): {0}", ex);
+                return null;
+            }
         }
 
         /// <summary>
@@ -674,7 +790,7 @@ namespace GameHistory.Controllers
                         if (!string.IsNullOrEmpty(symbolName)
                             && ctx.Mapping.TryGet(symbolName, out var p)
                             && p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence
-                            && (p.Paid || ctx.IncludeUnpaid)
+                            && ctx.InScope(p)
                             && ctx.Computed.ContainsKey(symbolName))
                         {
                             // Last assignment wins => the last in-group occurrence in render order.
@@ -703,14 +819,15 @@ namespace GameHistory.Controllers
             MultiplierOverlayContext ctx,
             int reelIndex,
             int floorIndex,
-            Dictionary<string, GridCell> onceOverlayCells)
+            Dictionary<string, GridCell> onceOverlayCells,
+            RecordedOverlayGate recordedGate)
         {
             // Fallback in case the symbol is not in the mapping or has no computed amount: render the plain symbol image.
             decimal amount;
             if (ctx == null
                 || string.IsNullOrEmpty(symbolName)
                 || !ctx.Mapping.TryGet(symbolName, out MultiplierParams p)
-                || (!p.Paid && !ctx.IncludeUnpaid)
+                || !ctx.InScope(p)
                 || !ctx.Computed.TryGetValue(symbolName, out amount))
             {
                 return "<img src=\"" + symbolUrl + "\" >";
@@ -724,6 +841,21 @@ namespace GameHistory.Controllers
                     || !onceOverlayCells.TryGetValue(p.GroupName ?? symbolName, out var winner)
                     || winner.Reel != reelIndex
                     || winner.Floor != floorIndex)
+                {
+                    return "<img src=\"" + symbolUrl + "\" >";
+                }
+            }
+
+            // Recorded-outcome gate (global "MultiplierRecompute.GateOverlayOnRecordedWin"). When on and the gate was
+            // successfully read (non-null), overlay only where this spin's recorded located-scatter outcome confirms
+            // the win; every other in-scope occurrence renders plain. A null gate means the outcome could not be read
+            // -> fail open (fall through and show the computed value) rather than hide a possibly-real win.
+            if (ctx.GateOnRecordedWin && recordedGate != null)
+            {
+                bool paidThisSpin = (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+                    ? recordedGate.MatchedOnceGroups.Contains(p.GroupName ?? symbolName)
+                    : recordedGate.MatchedCells.Contains(new GridCell(reelIndex, floorIndex));
+                if (!paidThisSpin)
                 {
                     return "<img src=\"" + symbolUrl + "\" >";
                 }
