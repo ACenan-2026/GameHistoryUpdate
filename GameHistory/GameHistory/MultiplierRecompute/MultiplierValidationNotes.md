@@ -69,12 +69,14 @@ The overlay text style is configurable per `<group>` in `<GameName>_reels.xml`, 
 Config shape (both `<renderStyle>` elements optional):
 
 ```xml
-<group name="LocatedScatter" strategy="TotalBet">
+<group name="LocatedScatterPaid" strategy="TotalBet" paid="true">
   <renderStyle color="#FFFFFF" font="Arial, Helvetica, sans-serif" size="18" weight="bold" outline="#000000"/>
   <renderStyle state="unpaid" color="#9AA0A6" weight="normal"/>
   <symbol .../>
 </group>
 ```
+
+`paid` is a **group-level** attribute (see the schema note below): a group is wholly paying or wholly non-paying.
 
 - **Attributes:** `color` and `outline` are `#RGB`/`#RRGGBB` (outline also accepts `none`); `size` is px (1–200); `weight` is `normal`|`bold`; `font` is a family list (restricted charset — no raw CSS). An invalid value is dropped with a WARN and inherits rather than breaking the markup.
 - **Precedence / deltas.** Code default (the historical look: white, bold, 18px, black outline) ← base/paid `<renderStyle>` ← `state="unpaid"` delta. The unpaid block only lists what differs. Omit both and every tile renders exactly as before; omit just the unpaid block and non-payers look identical to payers.
@@ -82,6 +84,14 @@ Config shape (both `<renderStyle>` elements optional):
 - **Interaction with gating.** With `GateOverlayOnRecordedWin` **off** (default), both classes render and are told apart by style — this is where the unpaid style is seen. With it **on**, non-payers are suppressed entirely, so only the paid style is ever drawn and the unpaid style is inert.
 - **Fail-open.** If the recorded outcome cannot be read for a spin, tiles are treated as paid (paid style, never suppressed) rather than dimmed.
 - **Extensibility.** `RenderStyle` is nullable-field + field-driven merge/emit; adding a property later (outline width, italic, opacity) is a field + a parse line + an emit line, with the outline shadow shape isolated in one helper.
+
+#### Phase 2c (done): `paid` is a group-level attribute
+
+`paid` moved from the `<symbol>` to the `<group>`. A group is now wholly paying or wholly non-paying, which **enforces** — rather than merely conventions — that paid (`B`) and unpaid (`TB`) symbols live in separate groups. This pairs `paid` with the other group-level settings (`strategy`, `overlay`, `renderStyle`) instead of leaving it the odd attribute down on the symbol.
+
+- **Parse.** `MultiplierParams.Paid` is now sourced from the group's `paid` attribute and stamped onto every symbol in the group; downstream code (`InScope`, gate candidacy, `paidThisSpin`) is unchanged because it only reads `p.Paid`. A group with no valid `paid` defaults to `false` (non-paying) with a WARN; a leftover per-symbol `paid` is ignored with a WARN so a half-migrated config is caught.
+- **"Never pay" for free.** Because styles are per group, putting the `TB` symbols in their own `paid="false"` group gives them an independent look — a distinct "never pays" style, separate from the paid group's "paid but didn't trigger this spin" unpaid style. Three visual buckets (paid / didn't-trigger / never-pay) with no third `renderStyle` state and no extra render branch; the `TB` group typically needs just one base `<renderStyle>` (no unpaid delta), which also sidesteps the fail-open edge since its paid and unpaid styles are identical. See `NorseLegend_reels.xml` for a worked split.
+- **Migration.** Every `<GameName>_reels.xml` moves `paid` up to the group; any group that mixed paid and unpaid symbols (e.g. the old single `LocatedScatter`) is split into a paid group and an unpaid group, each repeating the shared `strategy`.
 
 ## Framing
 
@@ -94,6 +104,6 @@ The Phase 1 validation logs are themselves useful evidence: a steady stream of c
 The validation pass is the main mitigation for two assumptions in the compute path:
 
 - **We display computed `base × value`, not the recorded per-occurrence outcome** — so occurrences that did not trigger still get a computed overlay.
-- **Paid/unpaid is treated as a property of the symbol type (code), not the specific occurrence** — relies on the game encoding paid vs unpaid in distinct codes (`B` vs `TB`).
+- **Paid/unpaid is treated as a property of the symbol type (code), not the specific occurrence** — relies on the game encoding paid vs unpaid in distinct codes (`B` vs `TB`), now declared per group (a group is wholly paid or wholly unpaid). Whether a *paid-class* occurrence actually paid a given spin is a separate, per-spin question answered by the recorded-outcome gate.
 
 Validation does not fix these; it makes their violations visible.
