@@ -62,6 +62,27 @@ Notes and known limits:
 - **The gate excludes unpaid symbols; `OverlayIncludesUnpaid` is a no-op while gating.** Under gating, only paid (`B`) symbols are overlay candidates. This is deliberate: an unpaid `TB` is indistinguishable *by amount* from an equal-value paid `B` (both compute the same `base × value`), and the recorded side is code-blind (it records "a located scatter paid 200", not "a `B10` paid 200"). If `TB` were a candidate, it could match a recorded amount that actually belonged to a paying `B` and — depending on grid render order — steal the overlay, leaving the paying `B` rendered plain. Excluding unpaid symbols from candidacy removes that inversion and makes the gate the sole authority on what paid. The scope rule lives in one place (`MultiplierOverlayContext.InScope`): `Paid || (IncludeUnpaid && !GateOnRecordedWin)`.
 - Still **not** amount-replacement or grey-out; it only decides whether the (unchanged) computed value is shown.
 
+#### Phase 2b (done): per-group render style, paid vs unpaid
+
+The overlay text style is configurable per `<group>` in `<GameName>_reels.xml`, and a scatter that did **not** pay a spin can be styled differently from one that did — the grey-out the Phase 2a note said the gate does *not* do, now available as a display choice rather than a hide.
+
+Config shape (both `<renderStyle>` elements optional):
+
+```xml
+<group name="LocatedScatter" strategy="TotalBet">
+  <renderStyle color="#FFFFFF" font="Arial, Helvetica, sans-serif" size="18" weight="bold" outline="#000000"/>
+  <renderStyle state="unpaid" color="#9AA0A6" weight="normal"/>
+  <symbol .../>
+</group>
+```
+
+- **Attributes:** `color` and `outline` are `#RGB`/`#RRGGBB` (outline also accepts `none`); `size` is px (1–200); `weight` is `normal`|`bold`; `font` is a family list (restricted charset — no raw CSS). An invalid value is dropped with a WARN and inherits rather than breaking the markup.
+- **Precedence / deltas.** Code default (the historical look: white, bold, 18px, black outline) ← base/paid `<renderStyle>` ← `state="unpaid"` delta. The unpaid block only lists what differs. Omit both and every tile renders exactly as before; omit just the unpaid block and non-payers look identical to payers.
+- **"Did not pay" = the Phase-1 union.** A statically-unpaid `TB`, **or** a paid-class `B` whose spin did not meet the trigger. The paid/unpaid decision reuses the recorded-outcome gate, which is now computed **every** round (not only under `GateOverlayOnRecordedWin`) — off gates nothing, it only labels tiles for styling; on additionally suppresses non-payers.
+- **Interaction with gating.** With `GateOverlayOnRecordedWin` **off** (default), both classes render and are told apart by style — this is where the unpaid style is seen. With it **on**, non-payers are suppressed entirely, so only the paid style is ever drawn and the unpaid style is inert.
+- **Fail-open.** If the recorded outcome cannot be read for a spin, tiles are treated as paid (paid style, never suppressed) rather than dimmed.
+- **Extensibility.** `RenderStyle` is nullable-field + field-driven merge/emit; adding a property later (outline width, italic, opacity) is a field + a parse line + an emit line, with the outline shadow shape isolated in one helper.
+
 ## Framing
 
 Traversing the history JSON is **downstream reconstruction of what the engine already computed and then partly discarded**. As a cross-check within the "stay in the Game History project" constraint it is genuinely useful and low-risk. As a source of per-cell ground truth it is fighting a lossy representation (unreliable `Symbols`, no coordinates, empty multiplier fields), which is why the durable answer still lives upstream — having the engine record the multiplier base and/or its resulting win at spin time.
