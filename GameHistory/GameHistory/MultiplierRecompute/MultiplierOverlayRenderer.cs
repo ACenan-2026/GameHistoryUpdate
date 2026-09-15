@@ -118,8 +118,7 @@ namespace GameHistory.MultiplierRecompute
                     return null;
                 }
 
-                // maps multiplier name to finalised amount
-                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer(parser).ComputeScatterAmounts(slotRoundReader);
+                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer().ComputeScatterAmounts(slotRoundReader, mapping);
 
                 if (sLog.IsDebugEnabled)
                 {
