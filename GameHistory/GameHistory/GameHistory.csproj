@@ -142,6 +142,7 @@
     <Compile Include="MultiplierRecompute\RecomputeStrategies.cs" />
     <Compile Include="MultiplierRecompute\MultiplierValidation.cs" />
     <Compile Include="MultiplierRecompute\MultiplierOccurrenceWalker.cs" />
+    <Compile Include="MultiplierRecompute\MultiplierOverlayRenderer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\FilterConfig.cs" />
