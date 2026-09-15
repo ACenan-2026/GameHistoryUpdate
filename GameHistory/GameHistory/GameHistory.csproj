@@ -137,6 +137,7 @@
     <Compile Include="SlotRoundReader\SlotRoundReader.Scatter.cs" />
     <Compile Include="MultiplierRecompute\WonAmountComputation.cs" />
     <Compile Include="MultiplierRecompute\MultiplierConfigParser.cs" />
+    <Compile Include="MultiplierRecompute\RenderStyle.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MultiplierRecompute\RecomputeStrategies.cs" />
     <Compile Include="MultiplierRecompute\MultiplierValidation.cs" />

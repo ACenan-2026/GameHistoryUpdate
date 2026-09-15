@@ -18,12 +18,12 @@
 			     uniformly, and shows nothing when only a payline paid.
 			     value = the wheel multiplier (Wh=x1 .. Wh5=x5). It is documentation only — TotalScatterWin
 			     does not use it — but it keeps a consistent symbol-to-multiplier mapping. -->
-			<group name="WheelResult" strategy="TotalScatterWin">
-				<symbol name="Wh"  value="1" paid="true"/>
-				<symbol name="Wh2" value="2" paid="true"/>
-				<symbol name="Wh3" value="3" paid="true"/>
-				<symbol name="Wh4" value="4" paid="true"/>
-				<symbol name="Wh5" value="5" paid="true"/>
+			<group name="WheelResult" strategy="TotalScatterWin" paid="true">
+				<symbol name="Wh"  value="1"/>
+				<symbol name="Wh2" value="2"/>
+				<symbol name="Wh3" value="3"/>
+				<symbol name="Wh4" value="4"/>
+				<symbol name="Wh5" value="5"/>
 			</group>
 		</multiplierGroups>
 	</GameHistoryConfig>
