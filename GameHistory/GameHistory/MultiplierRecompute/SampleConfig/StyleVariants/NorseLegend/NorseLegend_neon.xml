@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AgtReelConfig>
+  <agtReels>
+    <agtReel name="reel01" row="0" column="0" />
+    <agtReel name="reel02" row="0" column="1" />
+    <agtReel name="reel03" row="0" column="2" />
+    <agtReel name="reel04" row="0" column="3" />
+    <agtReel name="reel05" row="0" column="4" />
+    <agtReel name="reelf01" row="0" column="0" />
+    <agtReel name="reelf02" row="0" column="1" />
+    <agtReel name="reelf03" row="0" column="2" />
+    <agtReel name="reelf04" row="0" column="3" />
+    <agtReel name="reelf05" row="0" column="4" />
+  </agtReels>
+  <GameHistoryConfig gameName="NorseLegend">
+    <multiplierGroups>
+      <!--  value = int1 * int2  (prefix * number-after-b)
+
+            'paid' is a GROUP-level attribute: a group is wholly paying or wholly non-paying, so the paying (B)
+            and non-paying (TB) symbols are split into two groups. Both use the same TotalBet strategy. -->
+
+      <!-- Paying scatters. -->
+      <group name="LocatedScatterPaid" strategy="TotalBet" paid="true">
+        <!-- Overlay text style. The base (paid) look is optional: omit it and the historical default is used
+             (white, bold, 18px, black outline). The unpaid block is a DELTA over the paid look - it only needs
+             the attributes that differ - and here applies to a B that did NOT meet the trigger this spin, so it
+             shows dimmed. This distinction is drawn only when recorded-outcome gating is off
+             (MultiplierRecompute.GateOverlayOnRecordedWin = false); with gating on, non-payers are hidden.
+             Attributes: color / outline = #RGB or #RRGGBB (outline also accepts "none"); size = px;
+             weight = normal | bold; font = family list. -->
+        <renderStyle color="#22E0FF" font="Verdana, Geneva, sans-serif" size="22" weight="bold" outline="#00303A"/>
+        <renderStyle state="unpaid" color="#5A9AA6" weight="normal"/>
+        <!--  Paid, no prefix (int1 = 1)  -->
+        <symbol name="B01" value="1"/>
+        <symbol name="B02" value="2"/>
+        <symbol name="B03" value="3"/>
+        <symbol name="B05" value="5"/>
+        <symbol name="B10" value="10"/>
+        <symbol name="B12" value="12"/>
+        <symbol name="B15" value="15"/>
+        <symbol name="B20" value="20"/>
+        <!--  Paid, 2x  -->
+        <symbol name="2xB01" value="2"/>
+        <symbol name="2xB02" value="4"/>
+        <symbol name="2xB03" value="6"/>
+        <symbol name="2xB05" value="10"/>
+        <symbol name="2xB10" value="20"/>
+        <symbol name="2xB12" value="24"/>
+        <symbol name="2xB15" value="30"/>
+        <symbol name="2xB20" value="40"/>
+        <!--  Paid, 3x  -->
+        <symbol name="3xB01" value="3"/>
+        <symbol name="3xB02" value="6"/>
+        <symbol name="3xB03" value="9"/>
+        <symbol name="3xB05" value="15"/>
+        <symbol name="3xB10" value="30"/>
+        <symbol name="3xB12" value="36"/>
+        <symbol name="3xB15" value="45"/>
+        <symbol name="3xB20" value="60"/>
+        <!--  Paid, 5x  -->
+        <symbol name="5xB01" value="5"/>
+        <symbol name="5xB02" value="10"/>
+        <symbol name="5xB03" value="15"/>
+        <symbol name="5xB05" value="25"/>
+        <symbol name="5xB10" value="50"/>
+        <symbol name="5xB12" value="60"/>
+        <symbol name="5xB15" value="75"/>
+        <symbol name="5xB20" value="100"/>
+      </group>
+
+      <!-- Non-paying (teaser) scatters: leading T. These can never pay, so the group is paid="false" and its
+           base style is the "never pay" look - a dimmer grey than the paid group's didn't-trigger unpaid style,
+           so the two kinds of non-payer read differently. No unpaid delta needed: every symbol here is non-paying,
+           so the base style is what they all take. -->
+      <group name="LocatedScatterNeverPay" strategy="TotalBet" paid="false">
+        <renderStyle color="#3E6B73" font="Verdana, Geneva, sans-serif" size="18" weight="normal" outline="#00252B"/>
+        <!--  Unpaid (leading T), no prefix  -->
+        <symbol name="TB01" value="1"/>
+        <symbol name="TB02" value="2"/>
+        <symbol name="TB03" value="3"/>
+        <symbol name="TB05" value="5"/>
+        <symbol name="TB10" value="10"/>
+        <symbol name="TB12" value="12"/>
+        <symbol name="TB15" value="15"/>
+        <symbol name="TB20" value="20"/>
+        <!--  Unpaid, 2x  -->
+        <symbol name="T2xB01" value="2"/>
+        <symbol name="T2xB02" value="4"/>
+        <symbol name="T2xB03" value="6"/>
+        <symbol name="T2xB05" value="10"/>
+        <symbol name="T2xB10" value="20"/>
+        <symbol name="T2xB12" value="24"/>
+        <symbol name="T2xB15" value="30"/>
+        <symbol name="T2xB20" value="40"/>
+        <!--  Unpaid, 3x  -->
+        <symbol name="T3xB01" value="3"/>
+        <symbol name="T3xB02" value="6"/>
+        <symbol name="T3xB03" value="9"/>
+        <symbol name="T3xB05" value="15"/>
+        <symbol name="T3xB10" value="30"/>
+        <symbol name="T3xB12" value="36"/>
+        <symbol name="T3xB15" value="45"/>
+        <symbol name="T3xB20" value="60"/>
+        <!--  Unpaid, 5x  -->
+        <symbol name="T5xB01" value="5"/>
+        <symbol name="T5xB02" value="10"/>
+        <symbol name="T5xB03" value="15"/>
+        <symbol name="T5xB05" value="25"/>
+        <symbol name="T5xB10" value="50"/>
+        <symbol name="T5xB12" value="60"/>
+        <symbol name="T5xB15" value="75"/>
+        <symbol name="T5xB20" value="100"/>
+      </group>
+    </multiplierGroups>
+  </GameHistoryConfig>
+</AgtReelConfig>

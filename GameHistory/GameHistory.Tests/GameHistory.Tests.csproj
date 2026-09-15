@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <Nullable>disable</Nullable>
+    <RootNamespace>GameHistory.Tests</RootNamespace>
+    <AssemblyName>GameHistory.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Versions float (*-*) so restore resolves to whatever the "Microsoft Visual Studio Offline
+       Packages" feed carries, since nuget.org isn't reachable here. Pin these to exact versions later
+       if you want reproducible restores. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="*-*" />
+    <PackageReference Include="MSTest.TestAdapter" Version="*-*" />
+    <PackageReference Include="MSTest.TestFramework" Version="*-*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameHistory\GameHistory.csproj" />
+  </ItemGroup>
+
+</Project>
