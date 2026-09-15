@@ -725,47 +725,72 @@ namespace GameHistory.Controllers
                 var gate = new RecordedOverlayGate();
                 HashSet<string> onceSeen = null;
 
-                int reelIdx = 0;
-                foreach (var reelItem in spin.Reels)
+                //int reelIdx = 0;
+                //foreach (var reelItem in spin.Reels)
+                //{
+                //    int floorIdx = 0;
+                //    if (reelItem?.Floors != null)
+                //    {
+                //        foreach (var floorItem in reelItem.Floors)
+                //        {
+                //            string symbolName = floorItem?.SymbolName;
+                //            // Only PAID-class symbols may claim a recorded located-scatter win. A statically
+                //            // unpaid (TB) symbol has the same computed amount as its equal-value paid sibling, so
+                //            // letting it match would let it steal that sibling's win (and mis-style both). A TB is
+                //            // always "did not pay" by virtue of its own paid="false" attribute, so it never needs a
+                //            // gate match to reach the unpaid style.
+                //            if (!string.IsNullOrEmpty(symbolName)
+                //                && ctx.Mapping.TryGet(symbolName, out var p)
+                //                && p.Paid
+                //                && ctx.Computed.TryGetValue(symbolName, out var amount))
+                //            {
+                //                if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
+                //                {
+                //                    // One overlay per group per spin: consume the recorded win once for the group,
+                //                    // not once per in-group tile, mirroring the validator's once-group dedup.
+                //                    string groupKey = p.GroupName ?? symbolName;
+                //                    if (onceSeen == null) onceSeen = new HashSet<string>();
+                //                    if (onceSeen.Add(groupKey))
+                //                    {
+                //                        int gi = pool.IndexOf(amount);
+                //                        if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedOnceGroups.Add(groupKey); }
+                //                    }
+                //                }
+                //                else
+                //                {
+                //                    int gi = pool.IndexOf(amount);
+                //                    if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedCells.Add(new GridCell(reelIdx, floorIdx)); }
+                //                }
+                //            }
+                //            floorIdx++;
+                //        }
+                //    }
+                //    reelIdx++;
+                //}
+
+                foreach (var occ in SpinGrid.Occurrences(spin, ctx.Mapping, ctx.Computed))
                 {
-                    int floorIdx = 0;
-                    if (reelItem?.Floors != null)
+                    var p = occ.Params;
+                    if (!p.Paid) continue;
+                    
+                    if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
                     {
-                        foreach (var floorItem in reelItem.Floors)
+                        // One overlay per group per spin: consume the recorded win once for the group,
+                        // not once per in-group tile, mirroring the validator's once-group dedup.
+                        string groupKey = p.GroupName ?? occ.Symbol;
+                        if (onceSeen == null) onceSeen = new HashSet<string>();
+                        if (onceSeen.Add(groupKey))
                         {
-                            string symbolName = floorItem?.SymbolName;
-                            // Only PAID-class symbols may claim a recorded located-scatter win. A statically
-                            // unpaid (TB) symbol has the same computed amount as its equal-value paid sibling, so
-                            // letting it match would let it steal that sibling's win (and mis-style both). A TB is
-                            // always "did not pay" by virtue of its own paid="false" attribute, so it never needs a
-                            // gate match to reach the unpaid style.
-                            if (!string.IsNullOrEmpty(symbolName)
-                                && ctx.Mapping.TryGet(symbolName, out var p)
-                                && p.Paid
-                                && ctx.Computed.TryGetValue(symbolName, out var amount))
-                            {
-                                if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
-                                {
-                                    // One overlay per group per spin: consume the recorded win once for the group,
-                                    // not once per in-group tile, mirroring the validator's once-group dedup.
-                                    string groupKey = p.GroupName ?? symbolName;
-                                    if (onceSeen == null) onceSeen = new HashSet<string>();
-                                    if (onceSeen.Add(groupKey))
-                                    {
-                                        int gi = pool.IndexOf(amount);
-                                        if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedOnceGroups.Add(groupKey); }
-                                    }
-                                }
-                                else
-                                {
-                                    int gi = pool.IndexOf(amount);
-                                    if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedCells.Add(new GridCell(reelIdx, floorIdx)); }
-                                }
-                            }
-                            floorIdx++;
+                            int gi = pool.IndexOf(occ.Amount);
+                            if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedOnceGroups.Add(groupKey); }
                         }
                     }
-                    reelIdx++;
+                    else
+                    {
+                        int gi = pool.IndexOf(occ.Amount);
+                        if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedCells.Add(new GridCell(occ.Reel, occ.Floor)); }
+                    }
+                    
                 }
                 return gate;
             }
@@ -791,28 +816,37 @@ namespace GameHistory.Controllers
             var winners = new Dictionary<string, GridCell>();
             if (ctx == null || spin?.Reels == null) return winners;
 
-            int reelIdx = 0;
-            foreach (var reelItem in spin.Reels)
+            //int reelIdx = 0;
+            //foreach (var reelItem in spin.Reels)
+            //{
+            //    int floorIdx = 0;
+            //    if (reelItem?.Floors != null)
+            //    {
+            //        foreach (var floorItem in reelItem.Floors)
+            //        {
+            //            string symbolName = floorItem?.SymbolName;
+            //            if (!string.IsNullOrEmpty(symbolName)
+            //                && ctx.Mapping.TryGet(symbolName, out var p)
+            //                && p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence
+            //                && ctx.InScope(p)
+            //                && ctx.Computed.ContainsKey(symbolName))
+            //            {
+            //                // Last assignment wins => the last in-group occurrence in render order.
+            //                winners[p.GroupName ?? symbolName] = new GridCell(reelIdx, floorIdx);
+            //            }
+            //            floorIdx++;
+            //        }
+            //    }
+            //    reelIdx++;
+            //}
+            foreach (var occ in SpinGrid.Occurrences(spin, ctx.Mapping, ctx.Computed))
             {
-                int floorIdx = 0;
-                if (reelItem?.Floors != null)
+                var p = occ.Params;
+                if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence && ctx.InScope(p))
                 {
-                    foreach (var floorItem in reelItem.Floors)
-                    {
-                        string symbolName = floorItem?.SymbolName;
-                        if (!string.IsNullOrEmpty(symbolName)
-                            && ctx.Mapping.TryGet(symbolName, out var p)
-                            && p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence
-                            && ctx.InScope(p)
-                            && ctx.Computed.ContainsKey(symbolName))
-                        {
-                            // Last assignment wins => the last in-group occurrence in render order.
-                            winners[p.GroupName ?? symbolName] = new GridCell(reelIdx, floorIdx);
-                        }
-                        floorIdx++;
-                    }
+                    // Last assignment wins => the last in-group occurrence in render order.
+                    winners[p.GroupName ?? occ.Symbol] = new GridCell(occ.Reel, occ.Floor);
                 }
-                reelIdx++;
             }
             return winners;
         }
