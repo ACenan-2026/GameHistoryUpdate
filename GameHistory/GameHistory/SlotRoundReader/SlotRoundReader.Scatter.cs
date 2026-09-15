@@ -28,16 +28,34 @@ namespace GameHistory.MultiplierRecompute
         internal static bool IsScatterWinCategory(string type) =>
             !string.IsNullOrEmpty(type) && sScatterWinCategories.Contains(type);
 
+        // Parsed-once cache of the recorded scatter wins for every spin. The round (_gameInfo) is immutable, so the
+        // fragile Details parse is done a single time and reused across the validator, the render gate and the
+        // TotalScatterWin strategy rather than repeated on every call.
+        private List<List<decimal>> _scatterWinsCache;
+
+        private List<List<decimal>> ScatterWins =>
+            _scatterWinsCache ?? (_scatterWinsCache = ParseAllScatterWins());
+
         /// <summary>
         /// Retrieves a list of scatter wins from the game history. Each inner list corresponds to a single spin and
         /// contains the amounts of all scatter wins for that spin. If a spin has no scatter wins, the corresponding
-        /// inner list will be empty.
+        /// inner list will be empty. Each call returns a fresh copy, so a caller that consumes/mutates the lists
+        /// (e.g. the validator's multiset reconcile) cannot corrupt the cache or another caller's view.
         /// </summary>
         /// <returns>A list of lists containing scatter win amounts.</returns>
         public List<List<decimal>> GetScatterWins()
         {
+            return ScatterWins.Select(spin => new List<decimal>(spin)).ToList();
+        }
+
+        /// <summary>
+        /// Parses the recorded scatter wins for every spin out of the Details strings. Invoked once, lazily, via
+        /// <see cref="ScatterWins"/>; not called directly.
+        /// </summary>
+        private List<List<decimal>> ParseAllScatterWins()
+        {
             var slotDetails = _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
-            List<List<decimal>> scatterWinsList = new List<List<decimal>>();
+            var scatterWinsList = new List<List<decimal>>();
             if (slotDetails == null || slotDetails.Count == 0)
             {
                 return scatterWinsList; // Return empty list if there are no slot details
@@ -45,10 +63,7 @@ namespace GameHistory.MultiplierRecompute
 
             foreach (var spin in slotDetails)
             {
-                var details = spin.Details;
-
-                var scatterWins = GetOneSpinScatterWins(details);
-                scatterWinsList.Add(scatterWins);
+                scatterWinsList.Add(GetOneSpinScatterWins(spin.Details));
             }
             return scatterWinsList;
         }
@@ -113,8 +128,8 @@ namespace GameHistory.MultiplierRecompute
 
         public decimal GetScatterWinsTotal()
         {
-            var allWins = GetScatterWins();
-            return allWins.SelectMany(row => row).Sum();
+            // Read-only aggregate over the cache; no copy needed since Sum does not mutate.
+            return ScatterWins.SelectMany(row => row).Sum();
         }
     }
 }

@@ -27,7 +27,7 @@ namespace GameHistory.MultiplierRecompute
 
         /// <summary>
         /// Validates one game round. <paramref name="computedBySymbol"/> is the symbol -> finalised-amount map
-        /// produced by <see cref="WonAmountsComputer.ComputeScatterAmounts"/>. Returns a result describing any
+        /// produced by <see cref="WonAmountsComputer.ComputeWonAmounts"/>. Returns a result describing any
         /// discrepancies (also logged); the result is returned mainly for testing and for callers that want to act.
         /// </summary>
         public MultiplierValidationResult ValidateRound(
@@ -37,29 +37,33 @@ namespace GameHistory.MultiplierRecompute
         {
             var result = new MultiplierValidationResult();
 
+            // Walk the same per-spin VIEW-MODEL grids the render loop walks (built by getSymbols before validation
+            // runs), so the cross-check counts exactly what is overlaid and shares SpinGrid.Occurrences with the
+            // display code. grids is kept only to label each spin in the logs (the view model carries no key).
+            var spins = slotRoundReader.GetSlotModel()?.Symbols;
             var grids = slotRoundReader.GetUserPositionDict();
             var details = slotRoundReader.GetSlotDetails();
-            if (grids == null || details == null || mapping == null || computedBySymbol == null)
+            if (spins == null || details == null || mapping == null || computedBySymbol == null)
             {
                 return result;
             }
 
             string gameName = slotRoundReader.GetGameName() ?? "(unknown game)";
 
-            int spinCount = Math.Min(grids.Count, details.Count);
-            if (grids.Count != details.Count)
+            int spinCount = Math.Min(spins.Length, details.Count);
+            if (spins.Length != details.Count)
             {
                 sLog.DebugFormat(
                     "Game '{0}': grid spin count ({1}) does not match detail spin count ({2}); validating the first {3}.",
-                    gameName, grids.Count, details.Count, spinCount);
+                    gameName, spins.Length, details.Count, spinCount);
             }
 
             var allScatterWins = slotRoundReader.GetScatterWins();
 
             for (int i = 0; i < spinCount; i++)
             {
-                string spinKey = grids[i]?.Key ?? i.ToString();
-                var computed = CollectComputedPaidMultipliers(grids[i], mapping, computedBySymbol);
+                string spinKey = grids?.ElementAtOrDefault(i)?.Key ?? i.ToString();
+                var computed = CollectComputedPaidMultipliers(spins[i], mapping, computedBySymbol);
                 var recorded = allScatterWins.ElementAtOrDefault(i) ?? new List<decimal>();
                 Reconcile(gameName, spinKey, computed, recorded, result);
             }
@@ -75,39 +79,29 @@ namespace GameHistory.MultiplierRecompute
         /// several independent wins. "All" placement groups still contribute one entry per occurrence.
         /// </summary>
         private static List<KeyValuePair<string, decimal>> CollectComputedPaidMultipliers(
-            SlotUserPositionKeyValuePair grid,
+            SlotSymbolTableViewModel spin,
             MultiplierSymbolMapping mapping,
             IReadOnlyDictionary<string, decimal> computedBySymbol)
         {
-            var computed = new List<KeyValuePair<string, decimal>>();
-            var rows = grid?.Value;
-            if (rows == null) return computed;
-
+            var results = new List<KeyValuePair<string, decimal>>();
             HashSet<string> onceGroupsCounted = null;
 
-            foreach (var row in rows)
+            foreach (var occ in SpinGrid.Occurrences(spin, mapping, computedBySymbol))
             {
-                var positions = row?.Positions;
-                if (positions == null) continue;
+                var p = occ.Params;
+                if (!p.Paid) continue;
 
-                foreach (var symbol in positions)
+                if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
                 {
-                    if (string.IsNullOrEmpty(symbol)) continue;
-                    if (mapping.TryGet(symbol, out var p) && p.Paid
-                        && computedBySymbol.TryGetValue(symbol, out var amount))
-                    {
-                        if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
-                        {
-                            // One overlay is shown per group per spin, so count it once regardless of how many
-                            // in-group tiles are on the grid.
-                            if (onceGroupsCounted == null) onceGroupsCounted = new HashSet<string>();
-                            if (!onceGroupsCounted.Add(p.GroupName ?? symbol)) continue;
-                        }
-                        computed.Add(new KeyValuePair<string, decimal>(symbol, amount));
-                    }
+                    // One overlay is shown per group per spin, so count it once regardless of how many
+                    // in-group tiles are on the grid.
+                    if (onceGroupsCounted == null) onceGroupsCounted = new HashSet<string>();
+                    if (!onceGroupsCounted.Add(p.GroupName ?? occ.Symbol)) continue;
                 }
+
+                results.Add(new KeyValuePair<string, decimal>(occ.Symbol, occ.Amount));
             }
-            return computed;
+            return results;
         }
 
         /// <summary>

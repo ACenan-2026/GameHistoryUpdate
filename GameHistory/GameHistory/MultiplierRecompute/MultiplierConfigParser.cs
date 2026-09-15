@@ -55,7 +55,12 @@ namespace GameHistory.MultiplierRecompute
     /// </summary>
     public sealed class MultiplierParams
     {
-        public int Multiplier {  get; }
+        /// <summary>
+        /// The multiplier factor for base×value strategies (TotalBet / LineBet*); null when the config's 'value'
+        /// was missing or non-integer. TotalScatterWin ignores this. A null makes a base×value strategy return no
+        /// amount, so the tile renders plain rather than a bogus figure.
+        /// </summary>
+        public int? Multiplier {  get; }
         public bool Paid { get; }
         public StrategySpec Strategy { get; }
         public string GroupName { get; }
@@ -64,7 +69,7 @@ namespace GameHistory.MultiplierRecompute
         public RenderStyle UnpaidStyle { get; }
 
         public MultiplierParams(
-            int multiplier,
+            int? multiplier,
             bool paid,
             StrategySpec strategy,
             string groupName = null,
@@ -134,10 +139,10 @@ namespace GameHistory.MultiplierRecompute
     {
         private static readonly ILog sLog = LogManager.GetLogger(typeof(MultiplierConfigParser));
 
-        private readonly XDocument doc;
+        private readonly XDocument _doc;
         public MultiplierConfigParser(string path)
         {
-            doc = XDocument.Load(path);
+            _doc = XDocument.Load(path);
         }
 
 
@@ -145,7 +150,7 @@ namespace GameHistory.MultiplierRecompute
         {
             var multiplierMap = new MultiplierSymbolMapping();
 
-            var groups = doc.Root?.Element("GameHistoryConfig")?.Element("multiplierGroups")?.Elements("group")
+            var groups = _doc.Root?.Element("GameHistoryConfig")?.Element("multiplierGroups")?.Elements("group")
                          ?? Enumerable.Empty<XElement>();
 
             foreach (var groupElement in groups)
@@ -189,7 +194,16 @@ namespace GameHistory.MultiplierRecompute
                     {
                         sLog.WarnFormat("Symbol '{0}' in group '{1}' has a per-symbol 'paid' attribute; it is ignored — 'paid' is now set on the <group>.", symbol, groupName);
                     }
-                    int multiplier = int.TryParse(symbolElement.Attribute("value")?.Value, out var m) ? m : 1000000007;        // if your multiplier is 109, you are probably missing a value attribute in the XML
+                    // The multiplier factor for base×value strategies (TotalBet / LineBet*). A missing or
+                    // non-integer 'value' becomes null instead of a silent sentinel: a base×value strategy then
+                    // computes no amount and the tile renders plain (also surfaced by the Phase 1 validator),
+                    // while TotalScatterWin — which ignores 'value' — is unaffected.
+                    string rawValue = symbolElement.Attribute("value")?.Value;
+                    int? multiplier = int.TryParse(rawValue, out var m) ? m : (int?)null;
+                    if (multiplier == null)
+                    {
+                        sLog.WarnFormat("Symbol '{0}' in group '{1}' has a missing/invalid 'value' ('{2}'); no base×value overlay amount will be computed (TotalScatterWin ignores 'value').", symbol, groupName, rawValue ?? "(absent)");
+                    }
 
                     if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, paidStyleDelta, unpaidStyleDelta)))
                     {
