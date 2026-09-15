@@ -90,7 +90,7 @@ A group is a set of symbols that share a strategy, a placement, a **paid status*
 | Attribute | Required | Meaning |
 |-----------|----------|---------|
 | `name`    | yes | The symbol code exactly as it appears on the history grid (e.g. `B10`, `TB10`, `Wh3`). |
-| `value`   | yes for base×value strategies | The multiplier value. Used by `TotalBet` / `LineBetTotal` / `LineBetFromStaticMultiplier` as the `× value` factor. **Documentation-only** for `TotalScatterWin`. A missing/invalid `value` yields the sentinel `1000000007` — if you see that amount, a `value` is missing. |
+| `value`   | yes for base×value strategies | The multiplier value. Used by `TotalBet` / `LineBetTotal` / `LineBetFromStaticMultiplier` as the `× value` factor. **Documentation-only** for `TotalScatterWin`. A missing or non-integer `value` is logged as a WARN and treated as "no value": a base×value strategy then computes no amount and the tile renders plain (rather than showing a bogus figure); `TotalScatterWin` is unaffected. |
 | `paid`    | — | **Deprecated.** Ignored with a WARN; set `paid` on the `<group>` instead. |
 
 Duplicate `name` within the config is first-wins (later definitions ignored, with a WARN).
