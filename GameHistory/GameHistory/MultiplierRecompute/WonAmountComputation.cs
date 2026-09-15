@@ -18,7 +18,7 @@ namespace GameHistory.MultiplierRecompute
         /// is unknown, or whose amount cannot be determined this round, is omitted (its tile then renders plain).
         /// Returns an empty dictionary when the round has no slot model or the mapping is null/empty.
         /// </summary>
-        public IReadOnlyDictionary<string, decimal> ComputeScatterAmounts(
+        public IReadOnlyDictionary<string, decimal> ComputeWonAmounts(
             ISlotRoundReader slotRoundReader, MultiplierSymbolMapping mapping)
         {
             var results = new Dictionary<string, decimal>();

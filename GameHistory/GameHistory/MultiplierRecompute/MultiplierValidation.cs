@@ -27,7 +27,7 @@ namespace GameHistory.MultiplierRecompute
 
         /// <summary>
         /// Validates one game round. <paramref name="computedBySymbol"/> is the symbol -> finalised-amount map
-        /// produced by <see cref="WonAmountsComputer.ComputeScatterAmounts"/>. Returns a result describing any
+        /// produced by <see cref="WonAmountsComputer.ComputeWonAmounts"/>. Returns a result describing any
         /// discrepancies (also logged); the result is returned mainly for testing and for callers that want to act.
         /// </summary>
         public MultiplierValidationResult ValidateRound(

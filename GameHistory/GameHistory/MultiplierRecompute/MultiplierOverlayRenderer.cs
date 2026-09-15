@@ -118,7 +118,7 @@ namespace GameHistory.MultiplierRecompute
                     return null;
                 }
 
-                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer().ComputeScatterAmounts(slotRoundReader, mapping);
+                IReadOnlyDictionary<string, decimal> computed = new WonAmountsComputer().ComputeWonAmounts(slotRoundReader, mapping);
 
                 if (sLog.IsDebugEnabled)
                 {
