@@ -144,7 +144,7 @@ namespace GameHistory.MultiplierRecompute
             if (string.IsNullOrWhiteSpace(raw)) return null;
             string v = raw.Trim();
             if (HexColor.IsMatch(v)) return v;
-            sLog.WarnFormat("renderStyle {0} '{1}' in {2} is not a #RGB/#RRGGBB hex colour; ignoring (inheriting).", fieldName, raw, context);
+            sLog.WarnFormat("renderStyle {0} '{1}' in {2} is not a hex colour; ignoring (inheriting).", fieldName, raw, context);
             return null;
         }
 
