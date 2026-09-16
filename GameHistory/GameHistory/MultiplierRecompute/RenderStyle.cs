@@ -1,4 +1,6 @@
 ﻿using log4net;
+using System;
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -139,12 +141,35 @@ namespace GameHistory.MultiplierRecompute
         // ';', '"', ':', '{', '}', '<', '>' so a value can never escape the inline style attribute.
         private static readonly Regex FontName = new Regex("^[A-Za-z0-9 ,'\\-]+$", RegexOptions.Compiled);
 
+        /// <summary>
+        /// True if <paramref name="v"/> is a colour we accept: a #RGB / #RRGGBB hex literal (fast path, and it
+        /// keeps 3-digit shorthand working regardless of ColorTranslator's support for it), or any name/colour
+        /// ColorTranslator.FromHtml recognises (e.g. "red", "yellow", "#RRGGBB"). Anything FromHtml rejects —
+        /// including strings with ';', quotes or braces — returns false, so nothing can escape the inline style.
+        /// Note FromHtml is broader than CSS: it also accepts .NET system-colour names (e.g. "ButtonFace") that
+        /// browsers ignore; those validate here but render as inherited. Functional forms like rgb()/hsl() are
+        /// NOT accepted.
+        /// </summary>
+        private static bool IsAcceptableColor(string v)
+        {
+            if (HexColor.IsMatch(v)) return true;
+            try
+            {
+                ColorTranslator.FromHtml(v);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         private static string ValidateColor(string raw, string fieldName, string context)
         {
             if (string.IsNullOrWhiteSpace(raw)) return null;
             string v = raw.Trim();
-            if (HexColor.IsMatch(v)) return v;
-            sLog.WarnFormat("renderStyle {0} '{1}' in {2} is not a hex colour; ignoring (inheriting).", fieldName, raw, context);
+            if (IsAcceptableColor(v)) return v;
+            sLog.WarnFormat("renderStyle {0} '{1}' in {2} is not a valid colour (a name like 'red', or #RGB/#RRGGBB hex); ignoring (inheriting).", fieldName, raw, context);
             return null;
         }
 
@@ -183,8 +208,8 @@ namespace GameHistory.MultiplierRecompute
             if (string.IsNullOrWhiteSpace(raw)) return null;
             string v = raw.Trim();
             if (v.Equals("none", System.StringComparison.OrdinalIgnoreCase)) return "none";
-            if (HexColor.IsMatch(v)) return v;
-            sLog.WarnFormat("renderStyle outline '{0}' in {1} is not a hex colour or 'none'; ignoring (inheriting).", raw, context);
+            if (IsAcceptableColor(v)) return v;
+            sLog.WarnFormat("renderStyle outline '{0}' in {1} is not a colour (a name like 'red', #RGB/#RRGGBB hex) or 'none'; ignoring (inheriting).", raw, context);
             return null;
         }
     }
