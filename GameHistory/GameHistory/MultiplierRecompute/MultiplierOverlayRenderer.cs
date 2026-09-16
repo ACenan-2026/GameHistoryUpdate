@@ -33,7 +33,7 @@ namespace GameHistory.MultiplierRecompute
 
         /// <summary>
         /// Multiplier-recompute feature entry point for the details view. Resolves this game's history config
-        /// (&lt;GameConfigRoot&gt;\&lt;GameName&gt;\&lt;GameName&gt;_reels.xml), computes the finalised multiplier
+        /// (<GameConfigRoot>\<GameName>\<GameName>_reels.xml), computes the finalised multiplier
         /// amounts, runs the LOG-ONLY Phase 1 validation (cross-checks computed vs. recorded located-scatter wins
         /// and logs any divergence), and returns a renderer the tile loop uses to overlay those amounts. Wrapped so
         /// any failure is non-fatal to the history page: on error/disabled/no-config it returns null and the tiles
@@ -151,7 +151,7 @@ namespace GameHistory.MultiplierRecompute
 
         /// <summary>
         /// Resolves the absolute folder that contains the per-game history configs
-        /// (&lt;root&gt;\&lt;GameName&gt;\&lt;GameName&gt;_reels.xml). Order of preference:
+        /// (<root>\<GameName>\<GameName>_reels.xml). Order of preference:
         ///  1. The "MultiplierRecompute.GameConfigRoot" appSetting — an absolute path (e.g. C:\inetpub\wwwroot\GameConfig)
         ///     or an app-relative "~/..." path (resolved via <paramref name="mapPath"/>). Use this whenever the app
         ///     does not run from the deployed wwwroot copy (e.g. IIS Express / VS debugging against the source project).
