@@ -168,8 +168,8 @@ Optional. Up to two per group: a **base** (no `state`, or `state="paid"`) and an
 
 | Attribute | Values | Notes |
 |-----------|--------|-------|
-| `color`   | `#RGB` or `#RRGGBB` | Text fill. |
-| `outline` | `#RGB` / `#RRGGBB`, or `none` | Text outline (a 4-direction shadow plus a soft glow). `none` drops the outline. |
+| `color`   | a colour name (`red`, `yellow`, …) or `#RGB` / `#RRGGBB` hex | Text fill. Names are resolved via `ColorTranslator.FromHtml`; functional forms like `rgb()`/`hsl()` are not accepted. |
+| `outline` | a colour name or `#RGB` / `#RRGGBB` hex, or `none` | Text outline (a 4-direction shadow plus a soft glow). `none` drops the outline. |
 | `size`    | integer `1`–`200` | Font size in px. |
 | `weight`  | `normal` \| `bold` | Font weight. |
 | `font`    | family list | e.g. `Arial, Helvetica, sans-serif`. Restricted to letters, digits, spaces, commas, hyphens and single quotes — **no raw CSS**. |

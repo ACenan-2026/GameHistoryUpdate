@@ -1,4 +1,5 @@
 using System.Text;
+using System.Xml.Linq;
 using GameHistory.MultiplierRecompute;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -55,5 +56,42 @@ namespace GameHistory.Tests
 
             Assert.IsFalse(sb.ToString().Contains("text-shadow"));
         }
+
+        [TestMethod]
+        public void Parse_valid_color_when_hex_color_used()
+        {
+            string renderStyle = "<renderStyle color=\"#0000FF\" />";
+            XElement renderStyleElement = XElement.Parse(renderStyle);
+            var style = RenderStyle.Parse(renderStyleElement, "");
+            Assert.AreEqual("#0000FF", style.Color);
+        }
+
+        [TestMethod]
+        public void Parse_valid_color_when_plaintext_color_used()
+        {
+            string renderStyle = "<renderStyle color=\"blue\" />";
+            XElement renderStyleElement = XElement.Parse(renderStyle);
+            var style = RenderStyle.Parse(renderStyleElement, "");
+            Assert.AreEqual("blue", style.Color);
+        }
+
+        [TestMethod]
+        public void Parse_null_color_when_plaintext_color_is_invalid()
+        {
+            string renderStyle = "<renderStyle color=\"not-a-color\" />";
+            XElement renderStyleElement= XElement.Parse(renderStyle);
+            var style = RenderStyle.Parse(renderStyleElement, "");
+            Assert.IsNull(style.Color);
+        }
+
+        [TestMethod]
+        public void Parse_null_color_when_hex_color_is_invalid()
+        {
+            string renderStyle = "<renderStyle color=\"#RGBRGB\" />";
+            XElement renderStyleElement = XElement.Parse(renderStyle);
+            var style = RenderStyle.Parse(renderStyleElement, "");
+            Assert.IsNull(style.Color);
+        }
     }
+
 }
