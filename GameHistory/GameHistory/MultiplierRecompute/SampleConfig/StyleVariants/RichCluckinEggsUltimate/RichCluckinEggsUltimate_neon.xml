@@ -70,7 +70,7 @@
   </symbols>
 	<GameHistoryConfig gameName="RichCluckinEggsUltimate">
 		<multiplierGroups>
-			<group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="50" staticBetMultiplier="75" paid="true">
+			<group name="LocatedScatter" strategy="LineBetWithStaticMult" numLines="50" staticBetMultiplier="75" paid="true">
 				<renderStyle color="#22E0FF" font="Verdana, Geneva, sans-serif" size="22" weight="bold" outline="#00303A"/>
 				<renderStyle state="unpaid" color="#5A9AA6" weight="normal"/>
 				<symbol name="B01" value="1"/>

@@ -2,7 +2,7 @@
 <!--
   Game History multiplier config for RedEclipseRiches.
 
-  Strategy: LineBetFromStaticMultiplier
+  Strategy: LineBetWithStaticMult
     base = total_bet * numLines / staticBetMultiplier
     e.g. 3.00 * 20 / 30 = 2.00  ->  B05 -> 10.00, B08 -> 16.00, B10 -> 20.00.
 
@@ -22,7 +22,7 @@
 -->
 <GameHistoryConfig gameName="RedEclipseRiches">
   <multiplierGroups>
-    <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="20" staticBetMultiplier="30">
+    <group name="LocatedScatter" strategy="LineBetWithStaticMult" numLines="20" staticBetMultiplier="30">
       <symbol name="B01"  value="1"   paid="true" />
       <symbol name="B02"  value="2"   paid="true" />
       <symbol name="B03"  value="3"   paid="true" />

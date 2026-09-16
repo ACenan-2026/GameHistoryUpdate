@@ -38,29 +38,29 @@ namespace GameHistory.MultiplierRecompute
     }
 
     /// <summary>
-    /// Computes base = total_bet * numerator / denominator (multiply before divide, so an unreduced ratio like
-    /// 50/75 is as exact as 2/3). This is the line-bet total expressed as a fixed fraction of the total bet.
+    /// Computes base = total_bet * numLines / staticBetMultiplier (multiply before divide, so an unreduced
+    /// ratio like 50/75 is as exact as 2/3). This is the line-bet total expressed as a fixed fraction of the
+    /// total bet, using the game's own constants.
     ///
-    /// ASSUMES the ratio is constant for the game. It is fed either as a raw ratio ("LineBetTotal") or as the
-    /// game constants numLines/staticBetMultiplier ("LineBetFromStaticMultiplier") — both resolve to this class.
-    /// Do NOT use for games where the line count (or the bet multiplier) can vary per spin: there the ratio
-    /// is not constant and total_bet alone cannot recover the base.
+    /// ASSUMES the ratio is constant for the game. It is fed the game constants numLines/staticBetMultiplier
+    /// ("LineBetWithStaticMult"). Do NOT use for games where the line count (or the bet multiplier) can vary
+    /// per spin: there the ratio is not constant and total_bet alone cannot recover the base.
     /// </summary>
-    public sealed class LineBetTotalStrategy : IMultiplierBaseStrategy
+    public sealed class LineBetWithStaticMultStrategy : IMultiplierBaseStrategy
     {
-        // numerator/denominator of the fixed line-bet-total : total-bet ratio
-        private readonly decimal _numerator;
-        private readonly decimal _denominator;
+        // The fixed game constants that define the line-bet-total : total-bet ratio.
+        private readonly decimal _numLines;
+        private readonly decimal _staticBetMultiplier;
 
-        public LineBetTotalStrategy(decimal numerator, decimal denominator)
+        public LineBetWithStaticMultStrategy(decimal numLines, decimal staticBetMultiplier)
         {
-            _numerator = numerator;
-            _denominator = denominator;
+            _numLines = numLines;
+            _staticBetMultiplier = staticBetMultiplier;
         }
 
         public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
             slotRoundReader.GetTotalBet() is decimal totalBet
-                ? decimal.Round(totalBet * _numerator / _denominator, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
+                ? decimal.Round(totalBet * _numLines / _staticBetMultiplier, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
                 : (decimal?)null;
     }
 
@@ -136,27 +136,17 @@ namespace GameHistory.MultiplierRecompute
             {
                 case "TotalBet":
                     return TotalBetStrategy.Instance;
-                case "LineBetTotal":
-                    // expects properties "ratioNumerator" and "ratioDenominator" to be present in the attributes dictionary
-                    if (!TryGetInt(attributes, "ratioNumerator", out int num) || 
-                        !TryGetInt(attributes, "ratioDenominator", out int denom) ||
-                        denom == 0)
-                    {
-                        sLog.WarnFormat("LineBetTotal strategy requires 'ratioNumerator' and non-zero 'ratioDenominator' attributes.");
-                        return null;
-                    }
-                    return new LineBetTotalStrategy(num, denom);
-                case "LineBetFromStaticMultiplier":
+                case "LineBetWithStaticMult":
                     // Self-documenting, game-constant form: base = total_bet * numLines / staticBetMultiplier.
-                    // Assumes both are fixed for the game (see LineBetTotalStrategy); not for variable-line games.
+                    // Assumes both are fixed for the game (see LineBetWithStaticMultStrategy); not for variable-line games.
                     if (!TryGetInt(attributes, "numLines", out int lines) ||
                         !TryGetInt(attributes, "staticBetMultiplier", out int staticMult) ||
                         staticMult == 0)
                     {
-                        sLog.WarnFormat("LineBetFromStaticMultiplier strategy requires 'numLines' and non-zero 'staticBetMultiplier' attributes.");
+                        sLog.WarnFormat("LineBetWithStaticMult strategy requires 'numLines' and non-zero 'staticBetMultiplier' attributes.");
                         return null;
                     }
-                    return new LineBetTotalStrategy(lines, staticMult);
+                    return new LineBetWithStaticMultStrategy(lines, staticMult);
                 case "TotalScatterWin":
                     // Reads the finalised amount straight from the recorded located-scatter win — for
                     // wheel/jackpot games where the amount can't be reconstructed from config values.
