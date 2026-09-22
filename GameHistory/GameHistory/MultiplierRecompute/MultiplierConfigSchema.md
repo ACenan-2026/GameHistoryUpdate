@@ -107,11 +107,20 @@ no amount (the tile renders plain), logged.
 | `TotalBet` | none | `totalBet × value` | The located-scatter base is the whole total bet. |
 | `LineBetWithStaticMult` | `numLines`, `staticBetMultiplier` (non-zero) | `round(totalBet × numLines / staticBetMultiplier, 2) × value` | The base is a fixed fraction of the total bet (line-bet total), expressed with the game's own constants. |
 | `TotalScatterWin` | none | The recorded located-scatter win read straight from the round; `value` is not used. Returns nothing when no scatter win was recorded → the tile renders plain. | Wheel/jackpot features where the amount can't be reconstructed from config (base × value), but the round always records the resulting located-scatter win. |
+| `FixedAmount` | none | `value`, returned as-is (the bet and the round are ignored). Returns nothing when no `value` is set → the tile renders plain. | A jackpot tier (Mini/Minor/Major/Grand) that pays a fixed prize independent of the bet. Usually carried with `jackpot="true"`. |
 
 Notes:
 
 - `LineBetWithStaticMult` computes the base from the game's fixed `numLines` / `staticBetMultiplier`
   constants. Do **not** use it for games where the line count or bet multiplier varies per spin.
+- `FixedAmount` renders `value` directly, so `value` **must be the money (large-denomination) figure** the
+  paytable shows — the same unit as every other strategy's output, since the pipeline works in money and the
+  round model records **no denomination**. Sweet Chilli's paytable is already in dollars (Mini = 40), so its
+  `*_Bonus` label values are used directly. For a multi-denomination game whose paytable figure is in
+  **credits** (e.g. Laughing Dragon, where the label equals the credit weight), a fixed dollar amount does not
+  exist without the per-spin denomination: the config must pre-convert to the intended denom's money value, or
+  the round model must begin recording the denomination. `FixedAmount` deliberately has **no** compute path
+  for that conversion.
 - For base×value strategies, choosing the correct base matters: if the recorded located-scatter win is
   `totalBet × value`, use `TotalBet`; if it's a line-bet fraction, use `LineBetWithStaticMult`. A wrong
   base means computed amounts never reconcile with the recorded wins (see the
