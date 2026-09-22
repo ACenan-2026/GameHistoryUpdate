@@ -2,7 +2,7 @@
 <!--
   Game History multiplier config for RichCluckinEggsUltimate.
 
-  Strategy: LineBetFromStaticMultiplier
+  Strategy: LineBetWithStaticMult
     base = total_bet * numLines / staticBetMultiplier
     e.g. 7.50 * 50 / 75 = 5.00  ->  B01 -> 5.00, B05 -> 25.00 (matches recorded located-scatter wins).
 
@@ -22,7 +22,7 @@
 -->
 <GameHistoryConfig gameName="RichCluckinEggsUltimate">
   <multiplierGroups>
-    <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="50" staticBetMultiplier="75">
+    <group name="LocatedScatter" strategy="LineBetWithStaticMult" numLines="50" staticBetMultiplier="75">
       <symbol name="B01"  value="1"   paid="true" />
       <symbol name="B02"  value="2"   paid="true" />
       <symbol name="B03"  value="3"   paid="true" />

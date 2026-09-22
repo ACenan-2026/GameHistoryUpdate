@@ -93,7 +93,7 @@ namespace GameHistory.Tests.FallbackTests
             // The parser itself does not swallow a broken file; PrepareContext wraps this and renders plain.
             var path = TempConfig("<AgtReelConfig><GameHistoryConfig></AgtReelConfig>");
 
-            Assert.ThrowsException<System.Xml.XmlException>(() => new MultiplierConfigParser(path));
+            Assert.Throws<System.Xml.XmlException>(() => new MultiplierConfigParser(path));
         }
     }
 }

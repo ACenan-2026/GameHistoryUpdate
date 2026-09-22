@@ -28,33 +28,11 @@ namespace GameHistory.Tests.StrategiesTests
         }
 
         [TestMethod]
-        public void LineBetTotal_without_ratio_attributes_resolves_to_null()
-        {
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetTotal", new Dictionary<string, string>()));
-        }
-
-        [TestMethod]
-        public void LineBetTotal_with_zero_denominator_resolves_to_null()
-        {
-            var attrs = new Dictionary<string, string> { { "ratioNumerator", "1" }, { "ratioDenominator", "0" } };
-
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetTotal", attrs));
-        }
-
-        [TestMethod]
-        public void LineBetTotal_with_a_valid_ratio_resolves_to_a_strategy()
-        {
-            var attrs = new Dictionary<string, string> { { "ratioNumerator", "1" }, { "ratioDenominator", "3" } };
-
-            Assert.IsNotNull(MultiplierBaseStrategyResolver.Resolve("LineBetTotal", attrs));
-        }
-
-        [TestMethod]
-        public void LineBetFromStaticMultiplier_with_a_zero_multiplier_resolves_to_null()
+        public void LineBetWithStaticMult_with_a_zero_multiplier_resolves_to_null()
         {
             var attrs = new Dictionary<string, string> { { "numLines", "20" }, { "staticBetMultiplier", "0" } };
 
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetFromStaticMultiplier", attrs));
+            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetWithStaticMult", attrs));
         }
     }
 }

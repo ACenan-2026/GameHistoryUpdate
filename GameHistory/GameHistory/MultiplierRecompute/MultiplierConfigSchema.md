@@ -79,7 +79,7 @@ A group is a set of symbols that share a strategy, a placement, a **paid status*
 | `strategy` | yes (for output) | — | How each symbol's amount is computed. See [Strategies](#strategies). Missing → symbols resolve no amount (WARN). |
 | `paid`     | yes | `false` (+ WARN) | **Group-level.** `true` = a paying class (e.g. `B`); `false` = a non-paying class (e.g. `TB`). A group is *wholly* paid or *wholly* unpaid — this is what forces paid and unpaid symbols into separate groups. Missing/invalid defaults to `false` and warns. |
 | `overlay`  | no | `all` | Placement. See [Placement](#placement-overlay). |
-| *strategy attrs* | depends | — | Extra attributes read by some strategies (e.g. `ratioNumerator`, `numLines`). See [Strategies](#strategies). |
+| *strategy attrs* | depends | — | Extra attributes read by some strategies (e.g. `numLines`, `staticBetMultiplier`). See [Strategies](#strategies). |
 
 > **`paid` is group-level, not per-symbol.** A `paid` attribute on a `<symbol>` is ignored (with a WARN). To
 > have both paying and non-paying variants of the same denomination, put them in two groups (see the
@@ -90,7 +90,7 @@ A group is a set of symbols that share a strategy, a placement, a **paid status*
 | Attribute | Required | Meaning |
 |-----------|----------|---------|
 | `name`    | yes | The symbol code exactly as it appears on the history grid (e.g. `B10`, `TB10`, `Wh3`). |
-| `value`   | yes for base×value strategies | The multiplier value. Used by `TotalBet` / `LineBetTotal` / `LineBetFromStaticMultiplier` as the `× value` factor. **Documentation-only** for `TotalScatterWin`. A missing or non-integer `value` is logged as a WARN and treated as "no value": a base×value strategy then computes no amount and the tile renders plain (rather than showing a bogus figure); `TotalScatterWin` is unaffected. |
+| `value`   | yes for base×value strategies | The multiplier value. Used by `TotalBet` / `LineBetWithStaticMult` as the `× value` factor. **Documentation-only** for `TotalScatterWin`. A missing or non-integer `value` is logged as a WARN and treated as "no value": a base×value strategy then computes no amount and the tile renders plain (rather than showing a bogus figure); `TotalScatterWin` is unaffected. |
 | `paid`    | — | **Deprecated.** Ignored with a WARN; set `paid` on the `<group>` instead. |
 
 Duplicate `name` within the config is first-wins (later definitions ignored, with a WARN).
@@ -105,16 +105,15 @@ no amount (the tile renders plain), logged.
 | `strategy` | Extra group attributes | Amount | Use when |
 |------------|------------------------|--------|----------|
 | `TotalBet` | none | `totalBet × value` | The located-scatter base is the whole total bet. |
-| `LineBetTotal` | `ratioNumerator`, `ratioDenominator` (non-zero) | `round(totalBet × ratioNumerator / ratioDenominator, 2) × value` | The base is a fixed fraction of the total bet (line-bet total), expressed as a raw ratio. |
-| `LineBetFromStaticMultiplier` | `numLines`, `staticBetMultiplier` (non-zero) | `round(totalBet × numLines / staticBetMultiplier, 2) × value` | Same as above, but expressed with the game's own constants. |
+| `LineBetWithStaticMult` | `numLines`, `staticBetMultiplier` (non-zero) | `round(totalBet × numLines / staticBetMultiplier, 2) × value` | The base is a fixed fraction of the total bet (line-bet total), expressed with the game's own constants. |
 | `TotalScatterWin` | none | The recorded located-scatter win read straight from the round; `value` is not used. Returns nothing when no scatter win was recorded → the tile renders plain. | Wheel/jackpot features where the amount can't be reconstructed from config (base × value), but the round always records the resulting located-scatter win. |
 
 Notes:
 
-- `LineBetTotal` and `LineBetFromStaticMultiplier` share one implementation; they are just two ways to supply
-  the same ratio. Do **not** use either for games where the line count or bet multiplier varies per spin.
+- `LineBetWithStaticMult` computes the base from the game's fixed `numLines` / `staticBetMultiplier`
+  constants. Do **not** use it for games where the line count or bet multiplier varies per spin.
 - For base×value strategies, choosing the correct base matters: if the recorded located-scatter win is
-  `totalBet × value`, use `TotalBet`; if it's a line-bet fraction, use one of the line-bet strategies. A wrong
+  `totalBet × value`, use `TotalBet`; if it's a line-bet fraction, use `LineBetWithStaticMult`. A wrong
   base means computed amounts never reconcile with the recorded wins (see the
   [paid-decision caveat](#how-paidunpaid-is-decided-at-render-time)).
 
@@ -271,10 +270,10 @@ documentation-only here.
 </group>
 ```
 
-### 3. Line-bet base via game constants (`LineBetFromStaticMultiplier`)
+### 3. Line-bet base via game constants (`LineBetWithStaticMult`)
 
 ```xml
-<group name="LocatedScatter" strategy="LineBetFromStaticMultiplier"
+<group name="LocatedScatter" strategy="LineBetWithStaticMult"
        numLines="20" staticBetMultiplier="30" paid="true">
   <symbol name="B01" value="1"/>
   <symbol name="B25" value="25"/>

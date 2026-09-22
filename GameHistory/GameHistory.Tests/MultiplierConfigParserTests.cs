@@ -267,15 +267,15 @@ namespace GameHistory.Tests
         public void Strategy_type_and_attributes_are_captured_on_each_symbol()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"LineBetTotal\" paid=\"true\" ratioNumerator=\"1\" ratioDenominator=\"3\">" +
+                "<group name=\"g1\" strategy=\"LineBetWithStaticMult\" paid=\"true\" numLines=\"20\" staticBetMultiplier=\"30\">" +
                 "<symbol name=\"B01\" value=\"1\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual("LineBetTotal", p.Strategy.Type);
-            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("ratioNumerator", out var num));
-            Assert.AreEqual("1", num);
-            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("ratioDenominator", out var den));
-            Assert.AreEqual("3", den);
+            Assert.AreEqual("LineBetWithStaticMult", p.Strategy.Type);
+            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("numLines", out var lines));
+            Assert.AreEqual("20", lines);
+            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("staticBetMultiplier", out var staticMult));
+            Assert.AreEqual("30", staticMult);
         }
     }
 }

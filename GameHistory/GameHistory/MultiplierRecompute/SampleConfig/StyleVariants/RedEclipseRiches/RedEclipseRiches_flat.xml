@@ -115,7 +115,7 @@
   </symbols>
   <GameHistoryConfig gameName="RedEclipseRiches">
 	  <multiplierGroups>
-		  <group name="LocatedScatter" strategy="LineBetFromStaticMultiplier" numLines="20" staticBetMultiplier="30" paid="true">
+		  <group name="LocatedScatter" strategy="LineBetWithStaticMult" numLines="20" staticBetMultiplier="30" paid="true">
 				<renderStyle color="#FFFFFF" font="Trebuchet MS, Helvetica, sans-serif" size="16" weight="normal" outline="none"/>
 				<renderStyle state="unpaid" color="#B0B0B0"/>
 			  <symbol name="B01" value="1"/>

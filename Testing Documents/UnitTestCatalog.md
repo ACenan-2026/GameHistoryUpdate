@@ -114,7 +114,7 @@ multiplier symbol that has a computed amount, with its coordinates.
   the old sentinel).
 - **Returns_null_when_the_total_bet_is_unknown** — an unknown total bet yields no amount.
 
-### `LineBetTotalStrategyTests` — `LineBetTotalStrategy.GetWonAmount`
+### `LineBetWithStaticMultStrategyTests` — `LineBetWithStaticMultStrategy.GetWonAmount`
 - **Rounds_the_line_bet_base_to_two_places** — the line-bet base is rounded to two decimals.
 - **Multiplies_before_dividing_then_rounds** — multiplies before dividing so an unreduced ratio stays exact,
   then rounds.
@@ -135,23 +135,19 @@ multiplier symbol that has a computed amount, with its coordinates.
 - **Unknown_strategy_type_resolves_to_null** — an unknown type resolves to null (never throws).
 - **Null_strategy_type_resolves_to_null** — a null type resolves to null.
 - **TotalBet_resolves_to_a_strategy** — `"TotalBet"` resolves to a strategy.
-- **LineBetTotal_without_ratio_attributes_resolves_to_null** — `LineBetTotal` with no ratio attributes
-  resolves to null.
-- **LineBetTotal_with_zero_denominator_resolves_to_null** — a zero denominator resolves to null.
-- **LineBetTotal_with_a_valid_ratio_resolves_to_a_strategy** — a valid ratio resolves to a strategy.
-- **LineBetFromStaticMultiplier_with_a_zero_multiplier_resolves_to_null** — a zero `staticBetMultiplier`
+- **LineBetWithStaticMult_with_a_zero_multiplier_resolves_to_null** — a zero `staticBetMultiplier`
   resolves to null.
 
 ### `MultiplierBaseStrategyResolverExtraTests` — `MultiplierBaseStrategyResolver.Resolve` (remaining branches)
-- **LineBetFromStaticMultiplier_with_valid_constants_resolves_to_a_strategy** — valid `numLines` /
+- **LineBetWithStaticMult_with_valid_constants_resolves_to_a_strategy** — valid `numLines` /
   `staticBetMultiplier` resolve to a strategy.
-- **LineBetFromStaticMultiplier_missing_numLines_resolves_to_null** — a missing `numLines` resolves to null.
+- **LineBetWithStaticMult_missing_numLines_resolves_to_null** — a missing `numLines` resolves to null.
 - **TotalScatterWin_resolves_to_the_shared_strategy_instance** — `"TotalScatterWin"` resolves to the shared
   `TotalScatterWinStrategy.Instance`.
 - **TotalBet_resolves_to_the_shared_strategy_instance** — `"TotalBet"` resolves to the shared
   `TotalBetStrategy.Instance`.
-- **LineBetTotal_with_only_the_numerator_resolves_to_null** — a missing denominator resolves to null.
-- **LineBetTotal_with_a_non_integer_ratio_resolves_to_null** — a non-integer ratio value resolves to null.
+- **LineBetWithStaticMult_with_only_numLines_resolves_to_null** — a missing `staticBetMultiplier` resolves to null.
+- **LineBetWithStaticMult_with_a_non_integer_constant_resolves_to_null** — a non-integer `numLines` resolves to null.
 
 ---
 

@@ -230,7 +230,7 @@ namespace GameHistory.Controllers
 
 
                     // Current game is not completed
-                    if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
+                if (data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.StopTime == null)
                 {
                     return PartialView("GameInRestore", null);
                 }

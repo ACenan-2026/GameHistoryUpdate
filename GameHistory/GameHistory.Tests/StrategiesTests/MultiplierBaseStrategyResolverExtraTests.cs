@@ -5,24 +5,24 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace GameHistory.Tests.StrategiesTests
 {
     // Fills the remaining resolver branches not covered by MultiplierBaseStrategyResolverTests: the valid
-    // LineBetFromStaticMultiplier and TotalScatterWin paths, and the partial/invalid LineBet attribute cases.
+    // LineBetWithStaticMult and TotalScatterWin paths, and the partial/invalid LineBetWithStaticMult attribute cases.
     [TestClass]
     public class MultiplierBaseStrategyResolverExtraTests
     {
         [TestMethod]
-        public void LineBetFromStaticMultiplier_with_valid_constants_resolves_to_a_strategy()
+        public void LineBetWithStaticMult_with_valid_constants_resolves_to_a_strategy()
         {
             var attrs = new Dictionary<string, string> { { "numLines", "20" }, { "staticBetMultiplier", "40" } };
 
-            Assert.IsNotNull(MultiplierBaseStrategyResolver.Resolve("LineBetFromStaticMultiplier", attrs));
+            Assert.IsNotNull(MultiplierBaseStrategyResolver.Resolve("LineBetWithStaticMult", attrs));
         }
 
         [TestMethod]
-        public void LineBetFromStaticMultiplier_missing_numLines_resolves_to_null()
+        public void LineBetWithStaticMult_missing_numLines_resolves_to_null()
         {
             var attrs = new Dictionary<string, string> { { "staticBetMultiplier", "40" } };
 
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetFromStaticMultiplier", attrs));
+            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetWithStaticMult", attrs));
         }
 
         [TestMethod]
@@ -43,19 +43,19 @@ namespace GameHistory.Tests.StrategiesTests
         }
 
         [TestMethod]
-        public void LineBetTotal_with_only_the_numerator_resolves_to_null()
+        public void LineBetWithStaticMult_with_only_numLines_resolves_to_null()
         {
-            var attrs = new Dictionary<string, string> { { "ratioNumerator", "1" } };   // denominator missing
+            var attrs = new Dictionary<string, string> { { "numLines", "20" } };   // staticBetMultiplier missing
 
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetTotal", attrs));
+            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetWithStaticMult", attrs));
         }
 
         [TestMethod]
-        public void LineBetTotal_with_a_non_integer_ratio_resolves_to_null()
+        public void LineBetWithStaticMult_with_a_non_integer_constant_resolves_to_null()
         {
-            var attrs = new Dictionary<string, string> { { "ratioNumerator", "half" }, { "ratioDenominator", "3" } };
+            var attrs = new Dictionary<string, string> { { "numLines", "twenty" }, { "staticBetMultiplier", "40" } };
 
-            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetTotal", attrs));
+            Assert.IsNull(MultiplierBaseStrategyResolver.Resolve("LineBetWithStaticMult", attrs));
         }
     }
 }
