@@ -107,7 +107,7 @@ no amount (the tile renders plain), logged.
 | `TotalBet` | none | `totalBet × value` | The located-scatter base is the whole total bet. |
 | `LineBetWithStaticMult` | `numLines`, `staticBetMultiplier` (non-zero) | `round(totalBet × numLines / staticBetMultiplier, 2) × value` | The base is a fixed fraction of the total bet (line-bet total), expressed with the game's own constants. |
 | `TotalScatterWin` | none | The total won from *all* scatters from *all* spins that round.; `value` is not used. Returns nothing when no scatter win was recorded → the tile renders plain. | Wheel/jackpot features where a single sum is won across the entire round. The amount can't be reconstructed from config (base × value), but the round always records a single located-scatter win. |
-| `FixedAmount` | none | `value`, returned as-is (the bet and the round are ignored). Returns nothing when no `value` is set → the tile renders plain. | A jackpot tier (Mini/Minor/Major/Grand) that pays a fixed prize independent of the bet. Usually carried with `jackpot="true"`. |
+| `FixedAmount` - NOT SUPPORTED YET | none | `value`, returned as-is (the bet and the round are ignored). Returns nothing when no `value` is set → the tile renders plain. | A jackpot tier (Mini/Minor/Major/Grand) that pays a fixed prize independent of the bet. Usually carried with `jackpot="true"`. CANNOT USE YET BECAUSE DIFFERENT CURRENCIES DEMAND DIFFERENT FIXED VALUES WHICH THE CONFIG FILE CANNOT BE TOLD YET |
 
 Notes:
 
