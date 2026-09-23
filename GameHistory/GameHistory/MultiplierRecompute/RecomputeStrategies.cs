@@ -104,6 +104,31 @@ namespace GameHistory.MultiplierRecompute
 
 
     /// <summary>
+    /// A fixed prize attached to the symbol itself — a jackpot tier (Mini/Minor/Major/Grand) whose award
+    /// does NOT depend on the bet. There is nothing to compute from the round: the configured amount IS the
+    /// win, so this returns <see cref="MultiplierParams.Multiplier"/> as-is (the round is ignored). Returns
+    /// null when no amount is configured, so the tile renders plain rather than a zero.
+    ///
+    /// IMPORTANT — units. The whole recompute pipeline works in money (large-denomination) figures:
+    /// <see cref="ISlotRoundReader.GetTotalBet"/> is the money bet and every other strategy returns a money
+    /// amount. So the config 'value' for a FixedAmount symbol must ALSO be the money (large-denomination)
+    /// figure the paytable shows — e.g. Sweet Chilli's Mini = 40 (dollars), not its 1000-credit weight.
+    /// The round model carries NO denomination, so a fixed CREDIT figure cannot be converted to money here;
+    /// if a game's paytable value is in credits (a multi-denom game), the config must pre-convert it to the
+    /// intended denomination's money value (or the model must start recording the denom). See
+    /// MultiplierConfigSchema.md.
+    /// </summary>
+    public sealed class FixedAmountStrategy : IMultiplierBaseStrategy
+    {
+        /// <summary>Shared stateless instance — the amount comes entirely from the per-symbol config value.</summary>
+        public static readonly FixedAmountStrategy Instance = new FixedAmountStrategy();
+
+        public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
+            multiplierParams?.Multiplier is int amount ? (decimal?)amount : null;
+    }
+
+
+    /// <summary>
     /// Factory class to resolve the appropriate multiplier base strategy based on a given type.
     /// This allows for easy extension and addition of new strategies in the future.
     /// Returns null for an unknown / not-yet-implemented strategy type so the caller can degrade gracefully;
@@ -151,6 +176,14 @@ namespace GameHistory.MultiplierRecompute
                     // Reads the finalised amount straight from the recorded located-scatter win — for
                     // wheel/jackpot games where the amount can't be reconstructed from config values.
                     return TotalScatterWinStrategy.Instance;
+                case "FixedAmount":
+                    // A fixed prize carried by the symbol itself (a jackpot tier): the config 'value' is the
+                    // money amount and is rendered as-is, independent of the bet. See FixedAmountStrategy.
+                    // DO NOT USE YET -- TWO DIFFERENT CURRENCIES WILL REQUIRE TWO DIFFERENT VALUES WHICH THE CONFIG FILE CANNOT 
+                    // KNOW AHEAD OF TIME
+                    sLog.WarnFormat("FixedAmount strategy is not yet supported due to currency issues.");
+                    return null;
+                    // return FixedAmountStrategy.Instance;
                 default:
                     return null;
             }
