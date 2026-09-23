@@ -179,7 +179,11 @@ namespace GameHistory.MultiplierRecompute
                 case "FixedAmount":
                     // A fixed prize carried by the symbol itself (a jackpot tier): the config 'value' is the
                     // money amount and is rendered as-is, independent of the bet. See FixedAmountStrategy.
-                    return FixedAmountStrategy.Instance;
+                    // DO NOT USE YET -- TWO DIFFERENT CURRENCIES WILL REQUIRE TWO DIFFERENT VALUES WHICH THE CONFIG FILE CANNOT 
+                    // KNOW AHEAD OF TIME
+                    sLog.WarnFormat("FixedAmount strategy is not yet supported due to currency issues.");
+                    return null;
+                    // return FixedAmountStrategy.Instance;
                 default:
                     return null;
             }
