@@ -35,7 +35,7 @@ value the reader returns for the round, and must match the `gameName` attribute 
     <!-- Reel layout (unrelated to the multiplier overlay). -->
   </agtReels>
 
-  <GameHistoryConfig gameName="ExampleGame">
+  <GameHistoryConfig gameName="ExampleGame" [postWinDivider="N"]>
     <multiplierGroups>
 
       <group name="..." strategy="..." paid="true|false" overlay="all|onceLast" [strategy attributes]>
@@ -64,6 +64,23 @@ symbols, the game renders plain symbols (feature no-op).
 | Attribute  | Required | Meaning |
 |------------|----------|---------|
 | `gameName` | yes      | Must match the game's runtime name; used only for logging/traceability. |
+| `postWinDivider` | no (default `1`) | The game's `Ivar POST_WIN_DIVIDER = N` from the `.agm`. See below. |
+
+#### `postWinDivider`
+
+The engine divides **every** win by the game's POST_WIN_DIVIDER, and authors scale credit weights to suit, so
+the per-symbol `value` can be the raw `.agm` credit weight and the divider is applied here, once, at game level.
+
+- **Applied (divide last, round once to cents):** strategies that *compute* an amount — `TotalBet`,
+  `LineBetWithStaticMult`, `LineBetStaticMultNoLines`. E.g. a ways game with `postWinDivider="80"` and
+  `TotalBet` `value="12"` pays `totalBet × 12 / 80`.
+- **Not applied:** `TotalScatterWin` (reads the recorded win, which is already post-divider) and `FixedAmount`
+  (its value is a paytable money figure, not a divider-scaled weight).
+- Absent → `1` (no-op; games without a divider are unaffected). Anything other than a positive integer (`0`,
+  `-5`, `abc`, `1.5`) is WARNed and treated as `1`.
+- Two equivalent ways to express a divider game: `TotalBet` + raw weight + `postWinDivider` (preferred — mirrors
+  the `.agm`), or `TotalBet` + pre-divided value with no divider (e.g. the hand-authored TreasureSpiritsDragon
+  `B01 value="1"`). They compute the same amount; pre-dividing only works when every weight is a multiple of N.
 
 ### `<multiplierGroups>`
 
