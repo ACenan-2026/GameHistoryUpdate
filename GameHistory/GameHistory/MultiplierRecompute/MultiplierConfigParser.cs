@@ -41,6 +41,17 @@ namespace GameHistory.MultiplierRecompute
     }
 
     /// <summary>
+    /// Decides whether a multiplier symbol has the right to the entirety of a winning amount or a partial amount.
+    /// Motivated by the scatter-only game Cyber Cash, where a single located-scatter win is shared across several 
+    /// on-grid occurrences of the same symbol.
+    /// </summary>
+    public enum MultiplierClaims
+    {
+        Whole,      // The symbol claims the entire amount of a winning occurrence. This is the historical behaviour.
+        Shared      // The symbol claims a fraction of the amount of a winning occurrence, based on the number of symbols that contributed to the win.
+    }
+
+    /// <summary>
     /// Represents the parameters associated with a multiplier symbol, including its multiplier value,
     /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
     /// <see cref="Paid"/>, <see cref="GroupName"/>, <see cref="Placement"/>, <see cref="PaidStyle"/> and
@@ -66,11 +77,8 @@ namespace GameHistory.MultiplierRecompute
         public StrategySpec Strategy { get; }
         public string GroupName { get; }
         public MultiplierOverlayPlacement Placement { get; }
-        /// <summary>
-        /// The game-level POST_WIN_DIVIDER (from &lt;GameHistoryConfig postWinDivider="N"&gt;), copied onto every
-        /// symbol so strategies can reach it. Computing strategies divide their amount by it; TotalScatterWin
-        /// (reads a recorded, already-divided win) and FixedAmount ignore it. Always &gt;= 1.
-        /// </summary>
+        public MultiplierClaims Claims { get; }
+
         public int PostWinDivider { get; } = 1;
         public RenderStyle PaidStyle { get; }
         public RenderStyle UnpaidStyle { get; }
@@ -81,6 +89,7 @@ namespace GameHistory.MultiplierRecompute
             StrategySpec strategy,
             string groupName = null,
             MultiplierOverlayPlacement placement = MultiplierOverlayPlacement.All,
+            MultiplierClaims claims = MultiplierClaims.Whole,
             int postWinDivider = 1,
             RenderStyle paidStyle = null,
             RenderStyle unpaidStyle = null)
@@ -90,6 +99,7 @@ namespace GameHistory.MultiplierRecompute
             Strategy = strategy;
             GroupName = groupName;
             Placement = placement;
+            Claims = claims;
             PostWinDivider = postWinDivider > 0 ? postWinDivider : 1; // never 0: strategies divide by it
             // Resolve against the code default so these are never null and an un-styled group keeps the
             // historical look. UnpaidStyle falls back to PaidStyle (not Default) when no unpaid delta was
@@ -186,6 +196,7 @@ namespace GameHistory.MultiplierRecompute
                 }
 
                 MultiplierOverlayPlacement placement = ParsePlacement(groupElement.Attribute("overlay")?.Value, groupName);
+                MultiplierClaims claim = ParseClaim(groupElement.Attribute("claim")?.Value, groupName);
 
                 // Paid is a GROUP-level property: every symbol in a group shares one paid status, so a group is
                 // either wholly paying (B) or wholly non-paying (TB). This enforces that paid and unpaid symbols
@@ -220,7 +231,8 @@ namespace GameHistory.MultiplierRecompute
                         sLog.WarnFormat("Symbol '{0}' in group '{1}' has a missing/invalid 'value' ('{2}'); no base×value overlay amount will be computed (TotalScatterWin ignores 'value').", symbol, groupName, rawValue ?? "(absent)");
                     }
 
-                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, postWinDivider, paidStyleDelta, unpaidStyleDelta)))
+                    var mParams= new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, claim, postWinDivider, paidStyleDelta, unpaidStyleDelta);
+                    if (!multiplierMap.Insert(symbol, mParams))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
                     }
@@ -270,6 +282,22 @@ namespace GameHistory.MultiplierRecompute
                 default:
                     sLog.WarnFormat("Multiplier group '{0}' has unrecognised overlay '{1}'; defaulting to 'all'.", groupName, raw);
                     return MultiplierOverlayPlacement.All;
+            }
+        }
+
+        private static MultiplierClaims ParseClaim(string raw, string groupName)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return MultiplierClaims.Whole;
+
+            switch (raw.Trim().ToLowerInvariant())
+            {
+                case "whole":
+                    return MultiplierClaims.Whole;
+                case "shared":
+                    return MultiplierClaims.Shared;
+                default:
+                    sLog.WarnFormat("Multiplier group '{0}' has unrecognised claim value '{1}'; defaulting to 'whole'.", groupName, raw);
+                    return MultiplierClaims.Whole;
             }
         }
 
