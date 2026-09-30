@@ -97,8 +97,16 @@ namespace GameHistory.MultiplierRecompute
     /// unrelated win. It deliberately does NOT fall back to the round's total Won, which would include payline wins.
     /// It is stateless — no config values are needed; the config only lists which symbol(s) are the target.
     ///
-    /// ASSUMES one located pay per record, shown on the one visible overlay symbol. If a record ever
-    /// carried multiple located pays this returns their sum, which is only meaningful for a single tile.
+    /// LAST RESORT — deliberately strict. Use only when the amount cannot be derived any other way (not base × value,
+    /// not a count pay with claim="shared"). The contract, which is documented but NOT enforced in code:
+    ///  1. EXACTLY ONE recorded scatter win in the round (all spins). This returns the SUM of every recorded scatter
+    ///     win, and the paid/unpaid gate claims that sum WHOLE against a single recorded entry — so with two or more
+    ///     entries (or a scatter win on more than one spin) the sum matches no entry and the tile shows the summed
+    ///     amount in the UNPAID style (or is hidden under GateOverlayOnRecordedWin).
+    ///  2. It is the ONLY paid group in the config: every scatter win is folded into its amount, so any other paying
+    ///     group's wins would be added in. A paid="false" group alongside it is harmless.
+    ///  3. Paired with overlay="onceLast" and claim="whole" (the default): one indivisible win shown on one tile.
+    /// Rounds outside this contract are unsupported. See MultiplierConfigSchema.md → Strategies → notes.
     /// Returns null when no located-scatter amount is recorded, so the caller renders the plain symbol.
     /// </summary>
     public sealed class TotalScatterWinStrategy : IMultiplierBaseStrategy
