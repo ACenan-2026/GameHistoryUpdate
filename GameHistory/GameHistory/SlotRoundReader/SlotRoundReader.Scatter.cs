@@ -31,31 +31,32 @@ namespace GameHistory.MultiplierRecompute
         // Parsed-once cache of the recorded scatter wins for every spin. The round (_gameInfo) is immutable, so the
         // fragile Details parse is done a single time and reused across the validator, the render gate and the
         // TotalScatterWin strategy rather than repeated on every call.
-        private List<List<decimal>> _scatterWinsCache;
+        private List<List<RecordedScatterWin>> _scatterWinsCache;
 
-        private List<List<decimal>> ScatterWins =>
+        private List<List<RecordedScatterWin>> ScatterWins =>
             _scatterWinsCache ?? (_scatterWinsCache = ParseAllScatterWins());
 
         /// <summary>
         /// Retrieves a list of scatter wins from the game history. Each inner list corresponds to a single spin and
         /// contains the amounts of all scatter wins for that spin. If a spin has no scatter wins, the corresponding
-        /// inner list will be empty. Each call returns a fresh copy, so a caller that consumes/mutates the lists
-        /// (e.g. the validator's multiset reconcile) cannot corrupt the cache or another caller's view.
+        /// inner list will be empty. Each call returns a DEEP copy — new lists AND new entries — so a caller that
+        /// consumes the pool (e.g. the validator's reconcile decrementing SharesLeft) cannot corrupt the cache or
+        /// another caller's view.
         /// </summary>
-        /// <returns>A list of lists containing scatter win amounts.</returns>
-        public List<List<decimal>> GetScatterWins()
+        /// <returns>A list of lists containing scatter win entries.</returns>
+        public List<List<RecordedScatterWin>> GetScatterWins()
         {
-            return ScatterWins.Select(spin => new List<decimal>(spin)).ToList();
+            return ScatterWins.Select(spin => spin.Select(w => w.Copy()).ToList()).ToList();
         }
 
         /// <summary>
         /// Parses the recorded scatter wins for every spin out of the Details strings. Invoked once, lazily, via
         /// <see cref="ScatterWins"/>; not called directly.
         /// </summary>
-        private List<List<decimal>> ParseAllScatterWins()
+        private List<List<RecordedScatterWin>> ParseAllScatterWins()
         {
             var slotDetails = _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotDetails?.SlotDetails;
-            var scatterWinsList = new List<List<decimal>>();
+            var scatterWinsList = new List<List<RecordedScatterWin>>();
             if (slotDetails == null || slotDetails.Count == 0)
             {
                 return scatterWinsList; // Return empty list if there are no slot details
@@ -68,9 +69,9 @@ namespace GameHistory.MultiplierRecompute
             return scatterWinsList;
         }
 
-        public List<decimal> GetOneSpinScatterWins(string details)
+        public List<RecordedScatterWin> GetOneSpinScatterWins(string details)
         {
-            var scatterWins = new List<decimal>();
+            var scatterWins = new List<RecordedScatterWin>();
             if (string.IsNullOrEmpty(details))
             {
                 return scatterWins; // Return empty list if details are null or empty
@@ -80,19 +81,23 @@ namespace GameHistory.MultiplierRecompute
 
             foreach (var entry in eachWinType)
             {
-                decimal? winAmount = GetScatterWonAmount(entry);
-                if (winAmount.HasValue)
+                RecordedScatterWin scatterWin = GetScatterWonAmount(entry);
+                // Drop non-paying zero markers (a located scatter that did not pay records WinAmount 0): they are
+                // not wins and must never be match targets.
+                if (scatterWin != null && scatterWin.Amount != 0m)
                 {
-                    scatterWins.Add(winAmount.Value);
+                    scatterWins.Add(scatterWin);
                 }
             }
-            return scatterWins.Where(d => d != 0m).ToList();
+            return scatterWins;
         }
 
-        private decimal? GetScatterWonAmount(string entry)
+        private RecordedScatterWin GetScatterWonAmount(string entry)
         {
             decimal amount = 0m;
             bool validType = false;
+            int numSymbols = 1;
+
             string[] keyValues = entry.Split(DetailsFieldDelimiter);        // splitting on ','
 
             if (keyValues.Length == 0) return null;
@@ -117,11 +122,22 @@ namespace GameHistory.MultiplierRecompute
                         return null; // Invalid amount, skip this entry
                     }
                 }
+                else if (key.Equals("NumSymbols", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // How many symbols the engine counted toward this win (e.g. 13 for "13 x P1 anywhere").
+                    // Missing, unparseable or non-positive -> 1, which makes the entry behave exactly as a
+                    // plain single-amount win did before this field was read.
+                    if (!int.TryParse(val, System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture, out numSymbols) || numSymbols < 1)
+                    {
+                        numSymbols = 1;
+                    }
+                }
             }
 
             if (validType)
             {
-                return amount;
+                return new RecordedScatterWin(amount, numSymbols);   // unclaimed: SharesLeft == NumSymbols
             }
             return null;
         }
@@ -129,7 +145,7 @@ namespace GameHistory.MultiplierRecompute
         public decimal GetScatterWinsTotal()
         {
             // Read-only aggregate over the cache; no copy needed since Sum does not mutate.
-            return ScatterWins.SelectMany(row => row).Sum();
+            return ScatterWins.SelectMany(row => row).Sum(win => win.Amount);
         }
     }
 }
