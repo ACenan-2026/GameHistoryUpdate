@@ -1,5 +1,6 @@
 ﻿using log4net;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 using System;
@@ -65,6 +66,12 @@ namespace GameHistory.MultiplierRecompute
         public StrategySpec Strategy { get; }
         public string GroupName { get; }
         public MultiplierOverlayPlacement Placement { get; }
+        /// <summary>
+        /// The game-level POST_WIN_DIVIDER (from &lt;GameHistoryConfig postWinDivider="N"&gt;), copied onto every
+        /// symbol so strategies can reach it. Computing strategies divide their amount by it; TotalScatterWin
+        /// (reads a recorded, already-divided win) and FixedAmount ignore it. Always &gt;= 1.
+        /// </summary>
+        public int PostWinDivider { get; } = 1;
         public RenderStyle PaidStyle { get; }
         public RenderStyle UnpaidStyle { get; }
 
@@ -74,6 +81,7 @@ namespace GameHistory.MultiplierRecompute
             StrategySpec strategy,
             string groupName = null,
             MultiplierOverlayPlacement placement = MultiplierOverlayPlacement.All,
+            int postWinDivider = 1,
             RenderStyle paidStyle = null,
             RenderStyle unpaidStyle = null)
         {
@@ -82,6 +90,7 @@ namespace GameHistory.MultiplierRecompute
             Strategy = strategy;
             GroupName = groupName;
             Placement = placement;
+            PostWinDivider = postWinDivider > 0 ? postWinDivider : 1; // never 0: strategies divide by it
             // Resolve against the code default so these are never null and an un-styled group keeps the
             // historical look. UnpaidStyle falls back to PaidStyle (not Default) when no unpaid delta was
             // given, so paid and unpaid look identical unless the config asks for a distinction.
@@ -150,6 +159,12 @@ namespace GameHistory.MultiplierRecompute
         {
             var multiplierMap = new MultiplierSymbolMapping();
 
+            // Game-level POST_WIN_DIVIDER (the .agm's `Ivar POST_WIN_DIVIDER = N`). The engine divides every win by
+            // N, so strategies that COMPUTE an amount divide by it too; strategies that READ a recorded win
+            // (TotalScatterWin) ignore it, as the recorded figure is already post-divider. Absent → 1 (no-op).
+            // Anything other than a positive integer is rejected (0 would divide by zero) and defaults to 1.
+            int postWinDivider = ParsePostWinDivider(_doc.Root?.Element("GameHistoryConfig")?.Attribute("postWinDivider")?.Value);
+
             var groups = _doc.Root?.Element("GameHistoryConfig")?.Element("multiplierGroups")?.Elements("group")
                          ?? Enumerable.Empty<XElement>();
 
@@ -205,13 +220,32 @@ namespace GameHistory.MultiplierRecompute
                         sLog.WarnFormat("Symbol '{0}' in group '{1}' has a missing/invalid 'value' ('{2}'); no base×value overlay amount will be computed (TotalScatterWin ignores 'value').", symbol, groupName, rawValue ?? "(absent)");
                     }
 
-                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, paidStyleDelta, unpaidStyleDelta)))
+                    if (!multiplierMap.Insert(symbol, new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, postWinDivider, paidStyleDelta, unpaidStyleDelta)))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
                     }
                 }
             }
             return multiplierMap;
+        }
+
+        /// <summary>
+        /// Parses the optional game-level "postWinDivider" attribute on <GameHistoryConfig>. Absent/empty
+        /// -> 1 (no divider, silently — most games have none). A value that is not a positive integer ("0",
+        /// "-5", "abc") is warned and defaults to 1: 0 would divide by zero, and a garbled value should surface
+        /// in the log rather than silently skew every computed amount.
+        /// </summary>
+        internal static int ParsePostWinDivider(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return 1;
+
+            if (int.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int divider) && divider > 0)
+            {
+                return divider;
+            }
+
+            sLog.WarnFormat("GameHistoryConfig has invalid postWinDivider '{0}' (must be a positive integer); defaulting to 1.", raw);
+            return 1;
         }
 
         /// <summary>

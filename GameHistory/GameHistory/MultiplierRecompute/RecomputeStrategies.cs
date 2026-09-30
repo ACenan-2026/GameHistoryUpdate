@@ -21,6 +21,21 @@ namespace GameHistory.MultiplierRecompute
         decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams);
     }
 
+    /// <summary>
+    /// Applies the game-level POST_WIN_DIVIDER to an amount a strategy has COMPUTED. The engine divides every
+    /// win by the divider, so a computed amount must be too; the division is done LAST (after base × value) and
+    /// the result rounded to cents once, so no precision is lost to an intermediate rounding.
+    /// With divider 1 (no divider — the default) this is a no-op for any 2dp amount, so games without a divider
+    /// are unaffected. Not used by TotalScatterWin (the recorded win is already post-divider) or FixedAmount.
+    /// </summary>
+    internal static class PostWinDivision
+    {
+        internal static decimal? Apply(decimal? amount, int postWinDivider) =>
+            amount is decimal a
+                ? decimal.Round(a / (postWinDivider > 0 ? postWinDivider : 1), 2, System.MidpointRounding.AwayFromZero)
+                : (decimal?)null;
+    }
+
 
     /// <summary>
     /// A concrete implementation of the IMultiplierBaseStrategy interface that calculates the base value for multipliers
@@ -34,7 +49,7 @@ namespace GameHistory.MultiplierRecompute
         public static readonly TotalBetStrategy Instance = new TotalBetStrategy();
 
         public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
-            slotRoundReader.GetTotalBet() * multiplierParams.Multiplier;
+            PostWinDivision.Apply(slotRoundReader.GetTotalBet() * multiplierParams.Multiplier, multiplierParams.PostWinDivider);
     }
 
     /// <summary>
@@ -60,7 +75,9 @@ namespace GameHistory.MultiplierRecompute
 
         public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
             slotRoundReader.GetTotalBet() is decimal totalBet
-                ? decimal.Round(totalBet * _numLines / _staticBetMultiplier, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
+                ? PostWinDivision.Apply(
+                    decimal.Round(totalBet * _numLines / _staticBetMultiplier, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier,
+                    multiplierParams.PostWinDivider)
                 : (decimal?)null;
     }
 
@@ -97,6 +114,9 @@ namespace GameHistory.MultiplierRecompute
             // a payline win is ignored and we return null → the Wh tile renders plain rather than greedily showing
             // an unrelated win. Do NOT fall back to the round's total Won: that total includes payline wins and
             // would be painted onto an uninvolved tile.
+            //
+            // POST_WIN_DIVIDER is deliberately NOT applied: the recorded WinAmount is what was actually paid, so it
+            // has already been divided. A divider game can legitimately have a TotalScatterWin group — not an error.
             var total = slotRoundReader.GetScatterWinsTotal();
             return total > 0m ? total : (decimal?)null;
         }
@@ -117,6 +137,9 @@ namespace GameHistory.MultiplierRecompute
     /// if a game's paytable value is in credits (a multi-denom game), the config must pre-convert it to the
     /// intended denomination's money value (or the model must start recording the denom). See
     /// MultiplierConfigSchema.md.
+    ///
+    /// POST_WIN_DIVIDER is NOT applied: the value is a paytable/label money figure, not a divider-scaled credit
+    /// weight, so dividing it would mix scales.
     /// </summary>
     public sealed class FixedAmountStrategy : IMultiplierBaseStrategy
     {
@@ -136,7 +159,9 @@ namespace GameHistory.MultiplierRecompute
         }
         public decimal? GetWonAmount(ISlotRoundReader slotRoundReader, MultiplierParams multiplierParams) =>
             slotRoundReader.GetTotalBet() is decimal totalBet
-                ? decimal.Round(totalBet / _staticBetMultiplier, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier
+                ? PostWinDivision.Apply(
+                    decimal.Round(totalBet / _staticBetMultiplier, 2, System.MidpointRounding.AwayFromZero) * multiplierParams.Multiplier,
+                    multiplierParams.PostWinDivider)
                 : (decimal?)null;
     }
 
