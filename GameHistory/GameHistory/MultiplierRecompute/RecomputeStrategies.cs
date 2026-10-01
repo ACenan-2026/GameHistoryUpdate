@@ -100,9 +100,9 @@ namespace GameHistory.MultiplierRecompute
     /// LAST RESORT — deliberately strict. Use only when the amount cannot be derived any other way (not base × value,
     /// not a count pay with claim="shared"). The contract, which is documented but NOT enforced in code:
     ///  1. EXACTLY ONE recorded scatter win in the round (all spins). This returns the SUM of every recorded scatter
-    ///     win, and the paid/unpaid gate claims that sum WHOLE against a single recorded entry — so with two or more
-    ///     entries (or a scatter win on more than one spin) the sum matches no entry and the tile shows the summed
-    ///     amount in the UNPAID style (or is hidden under GateOverlayOnRecordedWin).
+    ///     win. The paid/unpaid gate does no amount matching for it (RecordedScatterWinPool.TryClaim): per spin it
+    ///     consumes every recorded scatter win and is paid iff the spin recorded any. So with several entries, or a
+    ///     scatter win on more than one spin, each paying spin shows the round TOTAL rather than its own win.
     ///  2. It is the ONLY paid group in the config: every scatter win is folded into its amount, so any other paying
     ///     group's wins would be added in. A paid="false" group alongside it is harmless.
     ///  3. Paired with overlay="onceLast" and claim="whole" (the default): one indivisible win shown on one tile.
@@ -221,7 +221,7 @@ namespace GameHistory.MultiplierRecompute
 
                     return new LineBetWithStaticMultStrategy(lines, staticMult);
                 }
-                case "TotalScatterWin":
+                case RecordedScatterWinPool.TotalScatterWinStrategyName:   // "TotalScatterWin"; TryClaim keys off the same name
                 {
                     // Reads the finalised amount straight from the recorded located-scatter win — for
                     // wheel/jackpot games where the amount can't be reconstructed from config values.
