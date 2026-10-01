@@ -64,7 +64,7 @@ namespace GameHistory.MultiplierRecompute
             {
                 string spinKey = grids?.ElementAtOrDefault(i)?.Key ?? i.ToString();
                 var computed = CollectComputedPaidMultipliers(spins[i], mapping, computedBySymbol);
-                var recorded = allScatterWins.ElementAtOrDefault(i) ?? new List<decimal>();
+                var recorded = allScatterWins.ElementAtOrDefault(i) ?? new List<RecordedScatterWin>();
                 Reconcile(gameName, spinKey, computed, recorded, result);
             }
 
@@ -72,18 +72,20 @@ namespace GameHistory.MultiplierRecompute
         }
 
         /// <summary>
-        /// Gathers every paid-multiplier symbol occurrence in a spin's grid, paired with its computed amount.
+        /// Gathers every paid-multiplier symbol occurrence in a spin's grid (symbol, params and computed amount).
         /// Mirrors the display's placement rule so the cross-check counts what is actually overlaid: a group whose
         /// placement is <see cref="MultiplierOverlayPlacement.OnceOnLastOccurrence"/> contributes a single entry
         /// per spin (its members share one recorded win), so its several on-grid tiles are not miscounted as
         /// several independent wins. "All" placement groups still contribute one entry per occurrence.
+        /// The params travel with each occurrence so <see cref="Reconcile"/> claims by the group's own mode without
+        /// re-looking it up in the mapping.
         /// </summary>
-        private static List<KeyValuePair<string, decimal>> CollectComputedPaidMultipliers(
+        private static List<MultiplierOccurrence> CollectComputedPaidMultipliers(
             SlotSymbolTableViewModel spin,
             MultiplierSymbolMapping mapping,
             IReadOnlyDictionary<string, decimal> computedBySymbol)
         {
-            var results = new List<KeyValuePair<string, decimal>>();
+            var results = new List<MultiplierOccurrence>();
             HashSet<string> onceGroupsCounted = null;
 
             foreach (var occ in SpinGrid.Occurrences(spin, mapping, computedBySymbol))
@@ -99,47 +101,44 @@ namespace GameHistory.MultiplierRecompute
                     if (!onceGroupsCounted.Add(p.GroupName ?? occ.Symbol)) continue;
                 }
 
-                results.Add(new KeyValuePair<string, decimal>(occ.Symbol, occ.Amount));
+                results.Add(occ);
             }
             return results;
         }
 
         /// <summary>
-        /// Matches computed paid-multiplier values against recorded located-scatter amounts for one spin (as a
-        /// multiset, by amount). Recorded zeros are not match targets (they represent non-paying located scatters).
-        ///  - A recorded amount left unmatched is a real payout config/base cannot explain -> WARN (actionable).
+        /// Matches computed paid-multiplier values against recorded located-scatter wins for one spin (as a
+        /// multiset, by amount), each occurrence claiming through <see cref="RecordedScatterWinPool.TryClaim"/> —
+        /// the same rule the render gate uses. Recorded zeros are not match targets (the reader drops them).
+        ///  - A recorded win nothing claimed is a real payout config/base cannot explain -> WARN (actionable).
         ///  - A computed value left unmatched often just means the symbol was on the reels but did not trigger a
         ///    located win this spin -> DEBUG (expected, low signal).
         /// </summary>
         private static void Reconcile(
             string gameName,
             string spinKey,
-            List<KeyValuePair<string, decimal>> computed,
-            List<decimal> recordedPool,
+            List<MultiplierOccurrence> computed,
+            List<RecordedScatterWin> recordedPool,
             MultiplierValidationResult result)
         {
             foreach (var c in computed)
             {
-                int idx = recordedPool.IndexOf(c.Value);
-                if (idx >= 0)
+                if (!recordedPool.TryClaim(c.Params, c.Amount))
                 {
-                    recordedPool.RemoveAt(idx); // matched
-                }
-                else
-                {
-                    result.UnmatchedComputed.Add(new MultiplierDiscrepancy(spinKey, c.Key, c.Value));
+                    result.UnmatchedComputed.Add(new MultiplierDiscrepancy(spinKey, c.Symbol, c.Amount));
                     sLog.DebugFormat(
                         "Game '{0}', spin '{1}': computed multiplier {2}={3} has no matching recorded located-scatter win (may not have triggered).",
-                        gameName, spinKey, c.Key, c.Value);
+                        gameName, spinKey, c.Symbol, c.Amount);
                 }
             }
 
-            foreach (var amount in recordedPool)
+            // Only entries nothing claimed are unexplained; a claimed entry is consumed, not deleted from the pool.
+            foreach (var win in recordedPool.Where(w => w.IsUntouched))
             {
-                result.UnexplainedRecorded.Add(new MultiplierDiscrepancy(spinKey, null, amount));
+                result.UnexplainedRecorded.Add(new MultiplierDiscrepancy(spinKey, null, win.Amount));
                 sLog.WarnFormat(
                     "Game '{0}', spin '{1}': recorded located-scatter win {2} has no matching computed multiplier value; check config/base.",
-                    gameName, spinKey, amount);
+                    gameName, spinKey, win.Amount);
             }
         }
     }
