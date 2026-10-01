@@ -242,7 +242,8 @@ namespace GameHistory.MultiplierRecompute
             try
             {
                 // Recorded located-scatter wins for this spin, read through the single reader. The reader already
-                // drops non-paying zero markers, so these are all real amounts and valid match targets.
+                // drops non-paying zero markers, so these are all real amounts and valid match targets. Each call
+                // returns fresh, unclaimed entries, so claiming (TryClaim) consumes only this spin's pool.
                 var pool = slotRoundReader.GetOneSpinScatterWins(spinDetails);
 
                 var gate = new RecordedOverlayGate();
@@ -259,16 +260,14 @@ namespace GameHistory.MultiplierRecompute
                         // not once per in-group tile, mirroring the validator's once-group dedup.
                         string groupKey = p.GroupName ?? occ.Symbol;
                         if (onceSeen == null) onceSeen = new HashSet<string>();
-                        if (onceSeen.Add(groupKey))
+                        if (onceSeen.Add(groupKey) && pool.TryClaim(p, occ.Amount))
                         {
-                            int gi = pool.IndexOf(occ.Amount);
-                            if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedOnceGroups.Add(groupKey); }
+                            gate.MatchedOnceGroups.Add(groupKey);
                         }
                     }
-                    else
+                    else if (pool.TryClaim(p, occ.Amount))
                     {
-                        int gi = pool.IndexOf(occ.Amount);
-                        if (gi >= 0) { pool.RemoveAt(gi); gate.MatchedCells.Add(new GridCell(occ.Reel, occ.Floor)); }
+                        gate.MatchedCells.Add(new GridCell(occ.Reel, occ.Floor));
                     }
                 }
                 return gate;
