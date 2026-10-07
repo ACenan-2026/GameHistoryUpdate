@@ -96,6 +96,7 @@ A group is a set of symbols that share a strategy, a placement, a **paid status*
 | `strategy` | yes (for output) | — | How each symbol's amount is computed. See [Strategies](#strategies). Missing → symbols resolve no amount (WARN). |
 | `paid`     | yes | `false` (+ WARN) | **Group-level.** `true` = a paying class (e.g. `B`); `false` = a non-paying class (e.g. `TB`). A group is *wholly* paid or *wholly* unpaid — this is what forces paid and unpaid symbols into separate groups. Missing/invalid defaults to `false` and warns. |
 | `overlay`  | no | `all` | Placement. See [Placement](#placement-overlay). |
+| `claim`    | no | `whole` | How the group's tiles claim the recorded win: `whole` or `shared`. See [Claiming recorded wins](#claiming-recorded-wins-claim). Unrecognised → `whole` (+ WARN). |
 | *strategy attrs* | depends | — | Extra attributes read by some strategies (e.g. `numLines`, `staticBetMultiplier`). See [Strategies](#strategies). |
 
 > **`paid` is group-level, not per-symbol.** A `paid` attribute on a `<symbol>` is ignored (with a WARN). To
@@ -123,11 +124,26 @@ no amount (the tile renders plain), logged.
 |------------|------------------------|--------|----------|
 | `TotalBet` | none | `totalBet × value` | The located-scatter base is the whole total bet. |
 | `LineBetWithStaticMult` | `numLines`, `staticBetMultiplier` (non-zero) | `round(totalBet × numLines / staticBetMultiplier, 2) × value` | The base is a fixed fraction of the total bet (line-bet total), expressed with the game's own constants. |
-| `TotalScatterWin` | none | The total won from *all* scatters from *all* spins that round.; `value` is not used. Returns nothing when no scatter win was recorded → the tile renders plain. | Wheel/jackpot features where a single sum is won across the entire round. The amount can't be reconstructed from config (base × value), but the round always records a single located-scatter win. |
+| `TotalScatterWin` | none | The total won from *all* scatters from *all* spins that round; `value` is not used. Returns nothing when no scatter win was recorded → the tile renders plain. **Expects exactly one recorded scatter win in the round** — see the note below. | **Last resort only**: wheel/jackpot features whose amount can't be derived any other way (not base × value, not a count pay). The round must record a single scatter win, and this must be the game's only paid group. |
 | `FixedAmount` - NOT SUPPORTED YET | none | `value`, returned as-is (the bet and the round are ignored). Returns nothing when no `value` is set → the tile renders plain. | A jackpot tier (Mini/Minor/Major/Grand) that pays a fixed prize independent of the bet. Usually carried with `jackpot="true"`. CANNOT USE YET BECAUSE DIFFERENT CURRENCIES DEMAND DIFFERENT FIXED VALUES WHICH THE CONFIG FILE CANNOT BE TOLD YET |
 
 Notes:
 
+- **`TotalScatterWin` is a deliberately strict, last-resort strategy.** Its contract:
+  1. **Exactly one recorded scatter win in the round** (one `Basic_Scatter` entry with an amount, across all
+     spins). The strategy shows the **sum** of every scatter win in the round. The paid/unpaid check does no
+     amount matching for it: on each spin it consumes every recorded scatter win and counts as paid iff the spin
+     recorded any (its record may carry `NumSymbols > 1` — several trigger tiles — so it is exempt from the whole
+     claim's single-symbol rule). Outside the contract the shown amount is wrong: with several entries, or a
+     scatter win on more than one spin (free spins), every paying spin shows the round **total**, not its own win.
+  2. **It must be the only paid group in the config.** Because it sums *every* scatter win, any other paying
+     group's wins are added into its amount. A `paid="false"` (never-pay) group alongside it is harmless.
+  3. Use it with `overlay="onceLast"` and `claim="whole"` (the default).
+
+  These limits are intentional — the strategy is not meant to be accommodating. If a game can be expressed with
+  a computing strategy (`TotalBet`, `LineBet*`) and the right `claim`, prefer that. Rounds outside the contract
+  are not supported; they are not guarded against in code either, so they render a misleading amount rather than
+  plain. (A spin that recorded no scatter win is still shown as unpaid.)
 - `LineBetWithStaticMult` computes the base from the game's fixed `numLines` / `staticBetMultiplier`
   constants. Do **not** use it for games where the line count or bet multiplier varies per spin.
 - `FixedAmount` renders `value` directly, so `value` **must be the money (large-denomination) figure** the
@@ -157,6 +173,34 @@ Controls how many of a symbol's on-grid occurrences carry the overlay.
 An unrecognised value falls back to `all` (with a WARN).
 
 ---
+
+## Claiming recorded wins (`claim`)
+
+The paid/unpaid decision matches each tile's computed amount against the spin's recorded scatter wins. Each
+recorded win carries an amount and `NumSymbols` — how many symbols the engine counted toward it (the engine writes
+one record per winning pay condition). A tile **claims** a record; a claimed record is consumed so it can't pay twice.
+Tiles claim in render order (reels left to right, floors top to bottom). The group's `claim` decides the rule:
+
+| `claim` | A tile claims… | Use when |
+|---------|----------------|----------|
+| `whole` (default) | an **untouched** record with **`NumSymbols == 1`** whose amount **equals** the tile's amount; the whole record is consumed. | Each tile is its own win: a located pay per cell (`WinL`), a per-coin pay. Every existing located-scatter game. |
+| `shared` | one share of a record with shares left where `amount × NumSymbols == recorded amount` (e.g. a 75 tile against (975, 13)). | Count pays — one `scatter` pay over N copies of a symbol, recorded once as (W, N) (Cyber Cash's "13 × P1 anywhere"). A share of a `NumSymbols == 1` record is the whole record, so a symbol paid both ways is still correct as `shared`. |
+
+Notes:
+
+- **`whole` assumes single-symbol records.** Every pulled located-scatter game (LaughingDragon, NorseLegend,
+  RedEclipseRiches, SweetChilli, TreasureSpiritsDragon, EagleDollar) records each **paying** scatter win with
+  `NumSymbols = 1`. Requiring it stops a whole tile from swallowing a count win of equal value — e.g. a 100 `whole`
+  tile taking the (100, 2) record of two 50 `shared` tiles. A rejection for this reason is logged (WARN); if one
+  appears for a game without count pays, that game breaks the assumption.
+- **`TotalScatterWin` doesn't claim by amount** — it consumes the spin's scatter wins (see its contract under
+  [Strategies](#strategies)), so it is unaffected by `NumSymbols`. A wheel modelled with a *computed* strategy and
+  `onceLast` would need its record to be single-symbol; use `TotalScatterWin` for wheels.
+- **`onceLast` groups are expected to use `whole`** — one indivisible win shown once. `shared` is accepted but
+  contradicts showing a single tile.
+- Remaining ambiguity: matching is by amount, not symbol, so two groups whose per-tile values coincide can still
+  claim each other's records (e.g. two symbols of equal value, one paid and one below its trigger). See the
+  collision notes in `MultiplierValidationNotes.md`.
 
 ## Paid vs. unpaid, and the three visual buckets
 
@@ -319,6 +363,7 @@ documentation-only here.
 - `renderStyle` with an invalid attribute value → that field dropped (inherits) + WARN.
 - `renderStyle` with an unrecognised `state` → ignored + WARN.
 - Unrecognised `overlay` value → treated as `all` + WARN.
+- Unrecognised `claim` value → treated as `whole` + WARN.
 
 ---
 

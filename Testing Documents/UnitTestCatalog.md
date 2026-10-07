@@ -15,7 +15,8 @@ end-to-end plan (see the E2E test plan doc), not by these unit tests.
 
 **Under test:** `SlotRoundReader.GetOneSpinScatterWins`, `GetScatterWins`, `GetScatterWinsTotal` (and, through
 them, the private `GetScatterWonAmount` / `ParseAllScatterWins` and `IsScatterWinCategory`). These parse the
-fragile `<br/>`-delimited "Details" string into per-spin located-scatter amounts.
+fragile `<br/>`-delimited "Details" string into per-spin `RecordedScatterWin` entries (amount + `NumSymbols`).
+Also covers `RecordedScatterWinPool.TryClaimWhole`, the claim rule the render gate and validator share.
 
 ### `SlotRoundReaderScatterTests`
 
@@ -41,7 +42,8 @@ fragile `<br/>`-delimited "Details" string into per-spin located-scatter amounts
   spin, empty for a spin that recorded no scatter.
 - **GetScatterWins_returns_an_empty_list_when_there_is_no_round_data** — a null round yields an empty result.
 - **GetScatterWins_returns_independent_copies_that_callers_cannot_use_to_corrupt_the_cache** — each call
-  returns fresh copies, so a caller mutating the lists cannot corrupt the parsed-once cache.
+  returns a deep copy, so a caller mutating the lists or consuming an entry (`SharesLeft`) cannot corrupt the
+  parsed-once cache.
 
 `GetScatterWinsTotal` (round-wide aggregate):
 - **GetScatterWinsTotal_sums_every_scatter_win_across_the_round** — sums all scatter wins, ignoring paylines.
@@ -57,6 +59,59 @@ fragile `<br/>`-delimited "Details" string into per-spin located-scatter amounts
   delimiter.
 - **GetScatterWinsTotal_equals_the_sum_of_the_per_spin_scatter_wins** — the total agrees with the per-spin
   breakdown it aggregates.
+- **GetScatterWinsTotal_sums_amounts_regardless_of_NumSymbols** — `NumSymbols` does not scale the total (975 over
+  13 symbols totals 975).
+
+`NumSymbols` (symbols counted toward each recorded win):
+- **OneSpin_reads_NumSymbols_and_starts_every_entry_unclaimed** — `NumSymbols: 13` is read; `SharesLeft` starts
+  at 13 (untouched).
+- **OneSpin_defaults_NumSymbols_to_1_when_absent** — no field → 1, i.e. the historical single-amount behaviour.
+- **OneSpin_defaults_NumSymbols_to_1_when_unparseable_or_non_positive** — `abc`, `0`, `-4` and empty all → 1.
+- **OneSpin_parses_a_real_CyberCash_count_scatter_Details_string** — the verbatim Cyber Cash (GameId 538)
+  Details yields one (975, 13) entry; the empty-`WinAmount` `Myst_Symbol` marker is skipped.
+- **OneSpin_still_drops_zero_amount_markers_that_carry_NumSymbols** — a zero amount is dropped even with a
+  `NumSymbols` count.
+
+`RecordedScatterWinPool.TryClaimWhole` (the whole-amount claim rule: untouched, `NumSymbols == 1`, equal amount):
+- **TryClaimWhole_consumes_the_first_untouched_entry_with_an_equal_amount** — first equal entry consumed;
+  duplicates stay claimable in order, then run out.
+- **TryClaimWhole_returns_false_when_no_amount_matches** — no match leaves the pool untouched.
+- **TryClaimWhole_never_takes_a_count_win_neither_a_share_nor_the_whole_amount** — neither 75 nor 975 can take
+  (975, 13) whole.
+- **TryClaimWhole_keeps_a_count_win_for_its_shared_tiles** — a 100 whole tile can't swallow (100, 2); both 50 shares
+  remain.
+- **TryClaimWhole_takes_the_single_symbol_entry_when_both_kinds_share_an_amount** — with (100, 2) and (100, 1), the
+  whole claim takes (100, 1).
+- **TryClaimWhole_is_false_for_a_null_pool** — null pool is handled.
+- **TryClaimWhole_cannot_take_an_entry_once_a_share_has_been_claimed** — a (20, 1) entry already taken as a share
+  can't then be taken whole.
+
+`RecordedScatterWinPool.TryClaimShared` (the per-symbol share claim rule):
+- **TryClaimShared_gives_out_exactly_NumSymbols_shares_then_runs_out** — (975, 13) yields exactly 13 claims of 75;
+  the 14th fails.
+- **TryClaimShared_rejects_a_value_that_is_not_an_exact_share** — 76, and the whole 975 (when N > 1), are rejected.
+- **TryClaimShared_matches_decimal_shares_exactly** — 0.15 against (1.95, 13) matches (multiplication, no rounding).
+- **TryClaimShared_on_a_single_symbol_entry_takes_the_whole_amount** — for N = 1 a share is the whole amount.
+- **TryClaimShared_routes_each_value_to_the_entry_it_divides** — two count wins in one spin; each value takes a
+  share of the entry it divides.
+- **TryClaimShared_cannot_take_from_an_entry_already_claimed_whole** — a whole-consumed entry has no shares left.
+- **TryClaimShared_is_false_for_a_null_pool** — null pool is handled.
+
+`RecordedScatterWinPool.TryClaim` (routing by the group's `claim` mode):
+- **TryClaim_with_shared_claims_a_per_symbol_share** — `Shared` routes to the share rule.
+- **TryClaim_with_whole_does_not_claim_a_share** / **TryClaim_with_whole_claims_the_full_amount_of_a_single_symbol_entry**
+  — `Whole` routes to the whole rule.
+- **TryClaim_with_null_params_falls_back_to_a_whole_claim** — null params behave as `Whole` (taking the single-symbol
+  entry) instead of throwing.
+
+`RecordedScatterWinPool.TryClaim` — the `TotalScatterWin` exemption (no amount matching under its contract):
+- **TryClaim_TotalScatterWin_consumes_every_entry_and_succeeds_without_amount_matching** — every entry (any amount,
+  any NumSymbols) is consumed; the claim succeeds.
+- **TryClaim_TotalScatterWin_fails_on_a_spin_that_recorded_nothing** — an empty pool → not paid.
+- **TryClaim_TotalScatterWin_fails_on_a_null_pool_without_throwing** — null pool → `false`.
+- **TryClaim_other_strategies_still_match_by_amount** — a `TotalBet` once-group is not exempt.
+- **TryClaimWhole_rejects_an_entry_counted_over_several_symbols** — (300, 3) can't be taken whole (WARN logged);
+  only `TotalScatterWin` (via `TryClaim`) takes it.
 
 ---
 
@@ -192,6 +247,16 @@ Overlay placement (`ParsePlacement` via `GetMultiplierParams`):
   `onceOnLastOccurrence` (case-insensitive) all parse to `OnceOnLastOccurrence` (data-driven).
 - **Overlay_unrecognised_value_degrades_to_all** — an unrecognised `overlay` degrades to `All`.
 
+Group `claim` (`ParseClaim`):
+- **Claim_absent_defaults_to_whole** / **Claim_whole_parses_to_whole** — absent or `whole` → `Whole`.
+- **Claim_shared_parses_case_and_whitespace_insensitively** — `shared` / `SHARED` / ` Shared ` → `Shared`
+  (data-driven).
+- **Claim_unrecognised_or_blank_value_degrades_to_whole** — `share`, `split` and whitespace-only → `Whole`
+  (data-driven).
+- **Claim_is_group_level_and_applies_to_every_symbol_in_the_group** — every symbol in a `shared` group is
+  `Shared`; other groups keep `Whole`.
+- **MultiplierParams_defaults_claims_to_whole** — the constructor default is `Whole`.
+
 Group `paid` (`ParseGroupPaid`):
 - **Group_paid_true_makes_its_symbols_paid** — `paid="true"` marks symbols paid.
 - **Group_paid_false_makes_its_symbols_unpaid** — `paid="false"` marks symbols unpaid.
@@ -243,6 +308,17 @@ against recorded located-scatter wins per spin (a multiset match by amount) and 
   count as a single computed entry (dedup), matching the one shared recorded win.
 - **All_placement_group_counts_every_occurrence** — an `all`-placement group counts each occurrence, so a
   surplus computed value is left unmatched (contrast with the once case).
+- **Shared_claims_reconcile_a_count_win_across_its_symbols** — the Cyber Cash round (11 P1 + R4 + R5 against
+  (975, 13)) with `shared`: nothing unexplained; only R4 / R5 unmatched.
+- **Whole_claims_cannot_reconcile_a_count_win** — the same round with `whole`: 975 unexplained, 13 unmatched.
+- **Shared_claims_leave_extra_tiles_unmatched_once_the_shares_run_out** — 14 P1 against 13 shares → 1 unmatched.
+- **Whole_and_shared_groups_reconcile_side_by_side_in_one_spin** — a whole B (20, 1) and a shared P1 count win
+  (375, 5) in one spin both reconcile.
+- **A_computed_once_placement_whole_claim_cannot_take_an_entry_counted_over_several_symbols** — a `once` wheel
+  with a computed strategy against (300, 3) is unmatched and the win unexplained (wheels use `TotalScatterWin`).
+- **A_TotalScatterWin_group_owns_the_spins_scatter_win_and_leaves_nothing_unexplained** — a `TotalScatterWin`
+  wheel consumes (300, 3); no discrepancy.
+- **A_TotalScatterWin_group_is_unmatched_on_a_spin_that_recorded_nothing** — on a scatter-less spin it is unmatched.
 - **The_spin_key_comes_from_the_user_position_dict_when_present** — the discrepancy's spin key comes from the
   user-position dictionary when available.
 - **Mismatched_grid_and_detail_counts_validate_only_the_overlapping_spins** — differing grid/detail counts
@@ -299,6 +375,21 @@ Once placement (`ResolveOnceOverlayCells`):
   cell in render order; earlier tiles render plain.
 - **Once_placement_dedupes_across_differently_coded_group_members** — the `once` dedup spans differently-coded
   members of the same group (e.g. `Wh` / `Wh2`).
+
+Claim modes (Cyber Cash round, GameId 538: 11 P1 + R4 + R5 + 2 Wd against a recorded (975, 13)):
+- **Shared_claims_mark_every_tile_of_a_count_win_as_paid** — every P1 takes the paid style and shows 75.
+- **Shared_claims_leave_symbols_below_the_trigger_unpaid** — the single R4 / R5 take the unpaid style.
+- **Whole_claims_leave_the_tiles_of_a_count_win_unpaid** — with `whole`, no P1 is confirmed paid.
+- **With_gating_on_shared_payers_render_and_below_trigger_symbols_are_suppressed** — gating on: P1 overlaid,
+  R4 / R5 plain.
+- **Unconfigured_wilds_render_plain_even_when_they_joined_the_count_win** — Wd isn't configured, so it renders plain.
+- **Shared_claims_mark_the_last_tiles_unpaid_once_the_shares_run_out** — 3 P1 against 2 shares: the last in
+  render order is unpaid.
+- **A_computed_once_placement_whole_claim_is_unpaid_for_an_entry_counted_over_several_symbols** — a `once` wheel
+  with a computed strategy against (300, 3) takes the unpaid style on its last tile.
+- **A_TotalScatterWin_wheel_is_paid_on_a_spin_that_recorded_its_win** — a `TotalScatterWin` wheel's result tile
+  takes the paid style.
+- **A_TotalScatterWin_wheel_is_unpaid_on_a_spin_that_recorded_nothing** — and the unpaid style on an empty spin.
 
 ---
 
@@ -379,7 +470,9 @@ validators for colour, font, size, weight and outline).
 
 - **`FakeRoundReader`** — a hand-written `ISlotRoundReader` fake (not a test). Fields default to benign values
   so tests set only what they need; the collection accessors hand out fresh copies so consumers that mutate
-  the lists cannot corrupt the fake's configured data.
+  the lists cannot corrupt the fake's configured data. Recorded wins can be set as plain amounts
+  (`ScatterWins` / `OneSpinScatterWins`, read as `NumSymbols = 1`) or as explicit entries
+  (`ScatterWinEntries` / `OneSpinScatterWinEntries`) when a test needs `NumSymbols`.
 - **Test `App.config`** — supplies the `MultiplierRecompute.*` appSettings baseline for the PrepareContext
   tests. It is compiled to `GameHistory.Tests.dll.config` and loaded only into the test process, entirely
   separate from the web app's `Web.config`.

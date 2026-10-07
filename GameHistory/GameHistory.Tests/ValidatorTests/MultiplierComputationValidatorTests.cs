@@ -44,6 +44,40 @@ namespace GameHistory.Tests.ValidatorTests
             };
         }
 
+        // Same, but with explicit recorded entries so a test can set NumSymbols (count-scatter wins).
+        private static FakeRoundReader ReaderFor(SlotSymbolTableViewModel spin, params RecordedScatterWin[] recorded)
+        {
+            return new FakeRoundReader
+            {
+                SlotModel = new GameHistoryGameInfoSlotModel { GameName = "G", Symbols = new[] { spin } },
+                SlotDetails = new List<GameHistorySlotPositionDetailModel> { new GameHistorySlotPositionDetailModel() },
+                ScatterWinEntries = new List<List<RecordedScatterWin>> { recorded.ToList() }
+            };
+        }
+
+        private static MultiplierParams WithClaims(MultiplierClaims claims, string group = "coins",
+            MultiplierOverlayPlacement placement = MultiplierOverlayPlacement.All) =>
+            new MultiplierParams(1, paid: true, strategy: new StrategySpec("TotalBet", new Dictionary<string, string>()),
+                groupName: group, placement: placement, claims: claims);
+
+        // The Cyber Cash round from GameId 538 (bet 7.50, line bet 0.15), laid out reel by reel: 11 x P1 (75 each),
+        // one R4 (0.3), one R5 (0.15) and two substituting wilds. The engine recorded one count win: (975, 13).
+        private static SlotSymbolTableViewModel CyberCashGrid() =>
+            Grid(Reel("Wd", "R5", "Wd"), Reel("R4", "P1", "P1"), Reel("P1", "P1", "P1"),
+                 Reel("P1", "P1", "P1"), Reel("P1", "P1", "P1"));
+
+        private static MultiplierSymbolMapping CyberCashMapping(MultiplierClaims claims)
+        {
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("P1", WithClaims(claims));
+            mapping.Insert("R4", WithClaims(claims));
+            mapping.Insert("R5", WithClaims(claims));
+            return mapping;
+        }
+
+        private static readonly Dictionary<string, decimal> CyberCashComputed =
+            new Dictionary<string, decimal> { { "P1", 75m }, { "R4", 0.3m }, { "R5", 0.15m } };
+
         private static MultiplierValidationResult Validate(
             FakeRoundReader reader, MultiplierSymbolMapping mapping, IReadOnlyDictionary<string, decimal> computed) =>
             new MultiplierComputationValidator().ValidateRound(reader, mapping, computed);
@@ -144,6 +178,83 @@ namespace GameHistory.Tests.ValidatorTests
             Assert.AreEqual(1, result.UnmatchedComputed.Count);
         }
 
+        // ----- claim modes (count-scatter wins recorded with NumSymbols) ---------------------------
+
+        [TestMethod]
+        public void Shared_claims_reconcile_a_count_win_across_its_symbols()
+        {
+            // Every P1 takes one 75 share of (975, 13); the entry is touched, so nothing is unexplained. The single
+            // R4 / R5 never reached the 5-symbol trigger, so they are the only unmatched computed values.
+            var reader = ReaderFor(CyberCashGrid(), new RecordedScatterWin(975m, 13));
+
+            var result = Validate(reader, CyberCashMapping(MultiplierClaims.Shared), CyberCashComputed);
+
+            Assert.AreEqual(0, result.UnexplainedRecorded.Count);
+            CollectionAssert.AreEquivalent(new[] { "R4", "R5" }, result.UnmatchedComputed.Select(d => d.Symbol).ToList());
+        }
+
+        [TestMethod]
+        public void Whole_claims_cannot_reconcile_a_count_win()
+        {
+            // The historical rule: no tile computes 975, so all 13 tiles are unmatched and 975 is unexplained.
+            var reader = ReaderFor(CyberCashGrid(), new RecordedScatterWin(975m, 13));
+
+            var result = Validate(reader, CyberCashMapping(MultiplierClaims.Whole), CyberCashComputed);
+
+            Assert.AreEqual(1, result.UnexplainedRecorded.Count);
+            Assert.AreEqual(975m, result.UnexplainedRecorded[0].Amount);
+            Assert.AreEqual(13, result.UnmatchedComputed.Count);
+        }
+
+        [TestMethod]
+        public void Shared_claims_leave_extra_tiles_unmatched_once_the_shares_run_out()
+        {
+            // 14 P1 tiles but only 13 shares recorded: exactly one tile is left unmatched.
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("P1", WithClaims(MultiplierClaims.Shared));
+            var grid = Grid(Reel("P1", "P1", "P1"), Reel("P1", "P1", "P1"), Reel("P1", "P1", "P1"),
+                            Reel("P1", "P1", "P1"), Reel("P1", "P1"));
+            var reader = ReaderFor(grid, new RecordedScatterWin(975m, 13));
+
+            var result = Validate(reader, mapping, new Dictionary<string, decimal> { { "P1", 75m } });
+
+            Assert.AreEqual(1, result.UnmatchedComputed.Count);
+            Assert.AreEqual(0, result.UnexplainedRecorded.Count);
+        }
+
+        [TestMethod]
+        public void Whole_and_shared_groups_reconcile_side_by_side_in_one_spin()
+        {
+            // A located B (whole, 20) and a count win of P1 (shared) recorded in the same spin.
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("B20", WithClaims(MultiplierClaims.Whole, group: "located"));
+            mapping.Insert("P1", WithClaims(MultiplierClaims.Shared));
+            var grid = Grid(Reel("B20", "P1"), Reel("P1", "P1"), Reel("P1", "P1"));
+            var reader = ReaderFor(grid, new RecordedScatterWin(20m), new RecordedScatterWin(375m, 5));
+            var computed = new Dictionary<string, decimal> { { "B20", 20m }, { "P1", 75m } };
+
+            var result = Validate(reader, mapping, computed);
+
+            Assert.IsFalse(result.HasDiscrepancies);
+        }
+
+        [TestMethod]
+        public void A_computed_once_placement_whole_claim_cannot_take_an_entry_counted_over_several_symbols()
+        {
+            // Whole claims require NumSymbols == 1; only TotalScatterWin is exempt. A wheel configured with a COMPUTED
+            // strategy (here TotalBet) against a 3-symbol record is therefore unmatched, and the win unexplained —
+            // see A_TotalScatterWin_group_owns_the_spins_scatter_win_and_leaves_nothing_unexplained for the supported way.
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("Wh", WithClaims(MultiplierClaims.Whole, group: "wheel",
+                placement: MultiplierOverlayPlacement.OnceOnLastOccurrence));
+            var reader = ReaderFor(Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")), new RecordedScatterWin(300m, 3));
+
+            var result = Validate(reader, mapping, new Dictionary<string, decimal> { { "Wh", 300m } });
+
+            Assert.AreEqual(1, result.UnmatchedComputed.Count);
+            Assert.AreEqual(1, result.UnexplainedRecorded.Count);
+        }
+
         [TestMethod]
         public void The_spin_key_comes_from_the_user_position_dict_when_present()
         {
@@ -233,6 +344,40 @@ namespace GameHistory.Tests.ValidatorTests
             Assert.IsTrue(withComputed.HasDiscrepancies);
 
             Assert.IsFalse(new MultiplierValidationResult().HasDiscrepancies);
+        }
+
+        // ----- TotalScatterWin: exempt from amount matching -----------------------------------------
+
+        private static MultiplierParams WheelTotalScatterWin() =>
+            new MultiplierParams(null, paid: true,
+                strategy: new StrategySpec("TotalScatterWin", new Dictionary<string, string>()),
+                groupName: "wheel", placement: MultiplierOverlayPlacement.OnceOnLastOccurrence);
+
+        [TestMethod]
+        public void A_TotalScatterWin_group_owns_the_spins_scatter_win_and_leaves_nothing_unexplained()
+        {
+            // Three Wh trigger tiles, one wheel win recorded over 3 symbols; the group consumes it, no discrepancy.
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("Wh", WheelTotalScatterWin());
+            var reader = ReaderFor(Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")), new RecordedScatterWin(300m, 3));
+
+            var result = Validate(reader, mapping, new Dictionary<string, decimal> { { "Wh", 300m } });
+
+            Assert.IsFalse(result.HasDiscrepancies);
+        }
+
+        [TestMethod]
+        public void A_TotalScatterWin_group_is_unmatched_on_a_spin_that_recorded_nothing()
+        {
+            // The round total is computed once, so the Wh tile is present on a scatter-less spin; it must not pass.
+            var mapping = new MultiplierSymbolMapping();
+            mapping.Insert("Wh", WheelTotalScatterWin());
+            var reader = ReaderFor(Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")));
+
+            var result = Validate(reader, mapping, new Dictionary<string, decimal> { { "Wh", 300m } });
+
+            Assert.AreEqual(1, result.UnmatchedComputed.Count);
+            Assert.AreEqual(0, result.UnexplainedRecorded.Count);
         }
     }
 }

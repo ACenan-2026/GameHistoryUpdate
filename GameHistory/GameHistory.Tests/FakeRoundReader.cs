@@ -21,8 +21,13 @@ namespace GameHistory.Tests
 
         // Optional backing data for the reader's collection accessors. Each defaults to a benign value so tests
         // that don't touch them behave exactly as before; a test that needs a specific outcome sets the field.
+        // Recorded scatter wins. The List<decimal> setters are shorthand for plain single-symbol wins (NumSymbols = 1),
+        // which is what every pre-NumSymbols test needs. A test that cares about NumSymbols sets the *Entries form
+        // instead; when set, it takes precedence over the shorthand.
         public List<List<decimal>> ScatterWins { get; set; }
         public List<decimal> OneSpinScatterWins { get; set; }
+        public List<List<RecordedScatterWin>> ScatterWinEntries { get; set; }
+        public List<RecordedScatterWin> OneSpinScatterWinEntries { get; set; }
         public List<SlotUserPositionKeyValuePair> UserPositionDict { get; set; }
         public List<GameHistorySlotPositionDetailModel> SlotDetails { get; set; }
 
@@ -31,15 +36,28 @@ namespace GameHistory.Tests
         public string GetGameName() => GameName;
         public GameHistoryGameInfoSlotModel GetSlotModel() => SlotModel;
 
-        // Hand out fresh copies so a caller that mutates the lists (the validator/gate consume them with RemoveAt)
-        // cannot corrupt the fake's configured data across calls — mirroring the real reader's copy-on-read.
-        public List<List<decimal>> GetScatterWins() =>
-            ScatterWins == null
-                ? new List<List<decimal>>()
-                : ScatterWins.Select(s => new List<decimal>(s)).ToList();
+        // Hand out fresh entries on every call so a caller that consumes the pool (the validator/gate decrement
+        // SharesLeft) cannot corrupt the fake's configured data across calls — mirroring the real reader.
+        public List<List<RecordedScatterWin>> GetScatterWins()
+        {
+            if (ScatterWinEntries != null)
+                return ScatterWinEntries.Select(s => s.Select(w => w.Copy()).ToList()).ToList();
+            return ScatterWins == null
+                ? new List<List<RecordedScatterWin>>()
+                : ScatterWins.Select(spin => Plain(spin)).ToList();
+        }
 
-        public List<decimal> GetOneSpinScatterWins(string details) =>
-            OneSpinScatterWins == null ? new List<decimal>() : new List<decimal>(OneSpinScatterWins);
+        public List<RecordedScatterWin> GetOneSpinScatterWins(string details)
+        {
+            if (OneSpinScatterWinEntries != null)
+                return OneSpinScatterWinEntries.Select(w => w.Copy()).ToList();
+            return Plain(OneSpinScatterWins);
+        }
+
+        private static List<RecordedScatterWin> Plain(List<decimal> amounts) =>
+            amounts == null
+                ? new List<RecordedScatterWin>()
+                : amounts.Select(a => new RecordedScatterWin(a)).ToList();
 
         public List<SlotUserPositionKeyValuePair> GetUserPositionDict() => UserPositionDict;
         public List<GameHistorySlotPositionDetailModel> GetSlotDetails() => SlotDetails;

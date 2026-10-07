@@ -93,6 +93,36 @@ Config shape (both `<renderStyle>` elements optional):
 - **"Never pay" for free.** Because styles are per group, putting the `TB` symbols in their own `paid="false"` group gives them an independent look — a distinct "never pays" style, separate from the paid group's "paid but didn't trigger this spin" unpaid style. Three visual buckets (paid / didn't-trigger / never-pay) with no third `renderStyle` state and no extra render branch; the `TB` group typically needs just one base `<renderStyle>` (no unpaid delta), which also sidesteps the fail-open edge since its paid and unpaid styles are identical. See `NorseLegend_reels.xml` for a worked split.
 - **Migration.** Every `<GameName>_reels.xml` moves `paid` up to the group; any group that mixed paid and unpaid symbols (e.g. the old single `LocatedScatter`) is split into a paid group and an unpaid group, each repeating the shared `strategy`.
 
+#### Phase 2d (done): `NumSymbols` and claim modes
+
+Each recorded scatter win is now read with its `NumSymbols` (how many symbols the engine counted toward it — one
+record per winning pay condition) into a `RecordedScatterWin`, and the per-spin pool is consumed through one entry
+point, `RecordedScatterWinPool.TryClaim`, shared by the render gate and the validator:
+
+- **`claim="whole"`** (default): an untouched record with `NumSymbols == 1` and an equal amount. The single-symbol
+  requirement is an assumption verified against every pulled located-scatter game (all paying scatter records have
+  `NumSymbols = 1`); a rejection on it is logged (WARN).
+- **`claim="shared"`**: one share of a record where `tile amount × NumSymbols == recorded amount` — count pays such as
+  Cyber Cash's "13 × P1 anywhere", recorded once as (975, 13). The generator emits it when a symbol is also paid by a
+  count pay (see HistoryConfigGen `ARCHITECTURE.md`).
+- **`TotalScatterWin`**: no amount matching — consumes the spin's scatter wins, paid iff any (its strict contract is
+  in `MultiplierConfigSchema.md`).
+
+**Collisions (what amount matching still can't tell apart).** Records carry no symbol or cell, and tiles claim in
+render order, so a record can go to the wrong tile when values coincide:
+
+1. *Whole vs shared* — closed by `NumSymbols == 1`: a whole tile can't take a multi-symbol count record, and a shared
+   tile of value W can take a (W, 1) record only if it comes first (both "paid W" either way).
+2. *Two symbols of equal per-tile value, one paid and one below its trigger* — the unpaid one may claim the payer's
+   share/record first. Requires two multiplier symbols with the same credit weight (none of the configured games).
+3. *Non-multiplier scatter wins in the pool* (e.g. a bonus-trigger scatter) — a tile whose value equals one would
+   claim it.
+4. *More matching tiles than `NumSymbols`* — the last ones in render order are marked unpaid, arbitrarily.
+
+Only display style (paid/unpaid, or hidden under the gate) is affected — the drawn amount always comes from the
+computed value. Symbol-level attribution (`SymbolId` / `WinComboId` mapping to pay conditions) would close 2–4 but
+depends on the engine's pay-condition numbering; it is a candidate for a log-only validator cross-check.
+
 ## Framing
 
 Traversing the history JSON is **downstream reconstruction of what the engine already computed and then partly discarded**. As a cross-check within the "stay in the Game History project" constraint it is genuinely useful and low-risk. As a source of per-cell ground truth it is fighting a lossy representation (unreliable `Symbols`, no coordinates, empty multiplier fields), which is why the durable answer still lives upstream — having the engine record the multiplier base and/or its resulting win at spin time.

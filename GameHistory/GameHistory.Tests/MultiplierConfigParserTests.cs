@@ -89,6 +89,81 @@ namespace GameHistory.Tests
             Assert.AreEqual(MultiplierOverlayPlacement.All, p.Placement);
         }
 
+        // ----- claim mode --------------------------------------------------------------------------
+
+        [TestMethod]
+        public void Claim_absent_defaults_to_whole()
+        {
+            var mapping = ParseGroups(
+                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("B01", out var p));
+            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
+        }
+
+        [TestMethod]
+        public void Claim_whole_parses_to_whole()
+        {
+            var mapping = ParseGroups(
+                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" claim=\"whole\"><symbol name=\"B01\" value=\"1\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("B01", out var p));
+            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
+        }
+
+        [DataTestMethod]
+        [DataRow("shared")]
+        [DataRow("SHARED")]
+        [DataRow(" Shared ")]
+        public void Claim_shared_parses_case_and_whitespace_insensitively(string claim)
+        {
+            var mapping = ParseGroups(
+                "<group name=\"g1\" strategy=\"LineBetStaticMultNoLines\" staticBetMultiplier=\"50\" paid=\"true\" claim=\"" + claim + "\">" +
+                "<symbol name=\"P1\" value=\"500\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("P1", out var p));
+            Assert.AreEqual(MultiplierClaims.Shared, p.Claims);
+        }
+
+        [DataTestMethod]
+        [DataRow("share")]      // near-miss of "shared"
+        [DataRow("split")]
+        [DataRow("   ")]        // whitespace-only is treated as absent
+        public void Claim_unrecognised_or_blank_value_degrades_to_whole(string claim)
+        {
+            var mapping = ParseGroups(
+                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" claim=\"" + claim + "\">" +
+                "<symbol name=\"B01\" value=\"1\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("B01", out var p));
+            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
+        }
+
+        [TestMethod]
+        public void Claim_is_group_level_and_applies_to_every_symbol_in_the_group()
+        {
+            var mapping = ParseGroups(
+                "<group name=\"coins\" strategy=\"TotalBet\" paid=\"true\" claim=\"shared\">" +
+                "<symbol name=\"P1\" value=\"500\" /><symbol name=\"R5\" value=\"1\" /></group>" +
+                "<group name=\"located\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<symbol name=\"B01\" value=\"1\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("P1", out var p1));
+            Assert.IsTrue(mapping.TryGet("R5", out var r5));
+            Assert.IsTrue(mapping.TryGet("B01", out var b01));
+            Assert.AreEqual(MultiplierClaims.Shared, p1.Claims);
+            Assert.AreEqual(MultiplierClaims.Shared, r5.Claims);
+            Assert.AreEqual(MultiplierClaims.Whole, b01.Claims);   // other groups keep the default
+        }
+
+        [TestMethod]
+        public void MultiplierParams_defaults_claims_to_whole()
+        {
+            var p = new MultiplierParams(1, paid: true, strategy: new StrategySpec("TotalBet", new Dictionary<string, string>()));
+
+            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
+        }
+
         // ----- group paid --------------------------------------------------------------------------
 
         [TestMethod]

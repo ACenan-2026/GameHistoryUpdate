@@ -41,12 +41,14 @@ namespace GameHistory.Tests.StrategiesTests
             Assert.IsNull(FixedAmountStrategy.Instance.GetWonAmount(reader, Params(null)));
         }
 
-        [TestMethod]
-        public void Resolver_maps_the_FixedAmount_type_to_the_strategy()
-        {
-            var strategy = MultiplierBaseStrategyResolver.Resolve("FixedAmount", new Dictionary<string, string>());
+        // Commented out this test  because fixed amount is currently not a valid strategy due to 
+        // not knowing the currency associated with a spin.  If we ever add a currency to the spin, we can re-enable feature and this test.
+        //[TestMethod]
+        //public void Resolver_maps_the_FixedAmount_type_to_the_strategy()
+        //{
+        //    var strategy = MultiplierBaseStrategyResolver.Resolve("FixedAmount", new Dictionary<string, string>());
 
-            Assert.IsInstanceOfType(strategy, typeof(FixedAmountStrategy));
-        }
+        //    Assert.IsInstanceOfType(strategy, typeof(FixedAmountStrategy));
+        //}
     }
 }
