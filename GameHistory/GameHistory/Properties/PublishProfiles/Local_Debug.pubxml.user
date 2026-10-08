@@ -6,7 +6,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
 <Project>
   <PropertyGroup>
     <_PublishTargetUrl>C:\inetpub\wwwroot\GameHistory</_PublishTargetUrl>
-    <History>True|2026-10-07T22:47:09.6231306Z||;True|2026-10-08T09:45:03.2171340+11:00||;True|2026-10-06T10:03:30.6655796+11:00||;True|2026-10-01T12:06:22.3936333+10:00||;True|2026-09-30T15:43:23.1274988+10:00||;True|2026-09-30T09:43:08.2681470+10:00||;True|2026-09-23T12:41:09.7065843+10:00||;True|2026-09-23T10:48:24.7573072+10:00||;True|2026-09-23T10:45:39.8355731+10:00||;True|2026-09-22T13:58:03.0187930+10:00||;True|2026-09-16T10:23:00.8234934+10:00||;True|2026-09-16T09:38:30.8348544+10:00||;True|2026-09-08T08:49:43.5756562+10:00||;True|2026-09-01T10:00:42.1748825+10:00||;</History>
+    <History>True|2026-10-08T00:15:40.3253767Z||;True|2026-10-08T11:11:45.4180764+11:00||;True|2026-10-08T10:46:17.3309304+11:00||;True|2026-10-08T10:42:28.9902484+11:00||;True|2026-10-08T10:40:24.2267240+11:00||;True|2026-10-08T10:32:25.1222471+11:00||;True|2026-10-08T10:26:56.9505968+11:00||;True|2026-10-08T10:10:30.4886897+11:00||;True|2026-10-08T10:03:44.6606354+11:00||;True|2026-10-08T09:47:09.6231306+11:00||;True|2026-10-08T09:45:03.2171340+11:00||;True|2026-10-06T10:03:30.6655796+11:00||;True|2026-10-01T12:06:22.3936333+10:00||;True|2026-09-30T15:43:23.1274988+10:00||;True|2026-09-30T09:43:08.2681470+10:00||;True|2026-09-23T12:41:09.7065843+10:00||;True|2026-09-23T10:48:24.7573072+10:00||;True|2026-09-23T10:45:39.8355731+10:00||;True|2026-09-22T13:58:03.0187930+10:00||;True|2026-09-16T10:23:00.8234934+10:00||;True|2026-09-16T09:38:30.8348544+10:00||;True|2026-09-08T08:49:43.5756562+10:00||;True|2026-09-01T10:00:42.1748825+10:00||;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
@@ -29,10 +29,10 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/27/2026 10:43:20</publishTime>
     </File>
     <File Include="bin/GameHistory.dll">
-      <publishTime>10/08/2026 09:47:05</publishTime>
+      <publishTime>10/08/2026 11:15:27</publishTime>
     </File>
     <File Include="bin/GameHistory.pdb">
-      <publishTime>10/08/2026 09:47:05</publishTime>
+      <publishTime>10/08/2026 11:15:27</publishTime>
     </File>
     <File Include="bin/jquery.min.js">
       <publishTime>02/16/2026 14:00:02</publishTime>
@@ -323,7 +323,7 @@ by editing this MSBuild file. In order to learn more about this please visit htt
       <publishTime>08/27/2026 10:43:21</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>10/06/2026 10:03:29</publishTime>
+      <publishTime>06/10/2026 10:03:29</publishTime>
     </File>
   </ItemGroup>
 </Project>

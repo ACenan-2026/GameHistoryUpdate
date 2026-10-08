@@ -53,7 +53,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")));
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             StringAssert.Contains(html, "<img src=\"" + Url + "\"");   // the original artwork is kept
             StringAssert.Contains(html, "position:absolute");           // the overlay span
@@ -70,7 +70,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", amount } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")));
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: decimal.Parse(expected));
 
             StringAssert.Contains(html, ">" + expected + "<");
         }
@@ -84,8 +84,8 @@ namespace GameHistory.Tests.OverlayTests
             var overlay1 = Overlay(mapping, new Dictionary<string, decimal> { { "B10", 5.50m } }, Grid(Reel("B10")));
             var overlay2 = Overlay(mapping, new Dictionary<string, decimal> { { "B10", 12.00m } }, Grid(Reel("B10")));
 
-            StringAssert.Contains(overlay1.BuildTile(Url, "B10", 0, 0), ">5.5<");
-            StringAssert.Contains(overlay2.BuildTile(Url, "B10", 0, 0), ">12<");
+            StringAssert.Contains(overlay1.BuildTile(Url, overlayAmount: 5.50m), ">5.5<");
+            StringAssert.Contains(overlay2.BuildTile(Url, overlayAmount: 12.00m), ">12<");
         }
 
         // ----- paid vs unpaid style (driven by the recorded-outcome gate) --------------------------
@@ -101,7 +101,7 @@ namespace GameHistory.Tests.OverlayTests
             // The spin recorded a located-scatter win equal to the computed amount -> this occurrence paid.
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")), recorded: new List<decimal> { 250m });
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             StringAssert.Contains(html, "color:#FF0000");
         }
@@ -117,7 +117,7 @@ namespace GameHistory.Tests.OverlayTests
             // No recorded win this spin -> not confirmed paid. Gating off, so it still renders, in the unpaid style.
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")), recorded: new List<decimal>());
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             StringAssert.Contains(html, "color:#00FF00");
         }
@@ -134,7 +134,7 @@ namespace GameHistory.Tests.OverlayTests
             var spinWithNoReels = new SlotSymbolTableViewModel { Reels = null };
             var overlay = Overlay(mapping, computed, spinWithNoReels, recorded: new List<decimal>());
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             StringAssert.Contains(html, "color:#FF0000");   // paid look, not dimmed
         }
@@ -149,7 +149,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")), gate: true, recorded: new List<decimal> { 250m });
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             Assert.AreNotEqual(SpinOverlay.PlainTile(Url), html);
             StringAssert.Contains(html, ">250<");
@@ -167,8 +167,8 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "Wh", 300m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("Wh", "Wh")), recorded: new List<decimal> { 300m });
 
-            var lastCell = overlay.BuildTile(Url, "Wh", 0, 1);
-            var firstCell = overlay.BuildTile(Url, "Wh", 0, 0);
+            var lastCell = overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: true, symbolName: "Wh");
+            var firstCell = overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: false, symbolName: "Wh");
 
             StringAssert.Contains(lastCell, ">300<");
             Assert.AreEqual(SpinOverlay.PlainTile(Url), firstCell);
@@ -185,8 +185,8 @@ namespace GameHistory.Tests.OverlayTests
             var overlay = Overlay(mapping, computed, Grid(Reel("Wh"), Reel("Wh2")), recorded: new List<decimal> { 300m });
 
             // reel0 = Wh (earlier), reel1 = Wh2 (last) -> only Wh2 is overlaid.
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "Wh", 0, 0));
-            StringAssert.Contains(overlay.BuildTile(Url, "Wh2", 1, 0), ">300<");
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: false, symbolName: "Wh"));
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: true, symbolName: "Wh2"), ">300<");
         }
 
         // ----- claim modes (count-scatter wins recorded with NumSymbols) ---------------------------
@@ -232,9 +232,9 @@ namespace GameHistory.Tests.OverlayTests
             var overlay = CyberCashOverlay(MultiplierClaims.Shared);
 
             // First P1 in render order (reel1 floor1) and the last (reel4 floor2) both take the paid style.
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 1, 1), PaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 4, 2), PaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 4, 2), ">75<");
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), PaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), PaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), ">75<");
         }
 
         [TestMethod]
@@ -243,9 +243,9 @@ namespace GameHistory.Tests.OverlayTests
             // A single R4 / R5 did not reach 5 of a kind: no share of their value exists, so they stay unpaid.
             var overlay = CyberCashOverlay(MultiplierClaims.Shared);
 
-            StringAssert.Contains(overlay.BuildTile(Url, "R4", 1, 0), UnpaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "R5", 0, 1), UnpaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "R4", 1, 0), ">0.3<");
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: false, symbolName: "R4"), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: false, symbolName: "R5"), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 0.3m, renderOverlay: true, symbolName: "R4"), ">0.3<");
         }
 
         [TestMethod]
@@ -254,8 +254,8 @@ namespace GameHistory.Tests.OverlayTests
             // The pre-claim behaviour: 75 != 975, so no P1 is confirmed paid.
             var overlay = CyberCashOverlay(MultiplierClaims.Whole);
 
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 1, 1), UnpaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 4, 2), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), UnpaidColour);
         }
 
         [TestMethod]
@@ -263,9 +263,9 @@ namespace GameHistory.Tests.OverlayTests
         {
             var overlay = CyberCashOverlay(MultiplierClaims.Shared, gate: true);
 
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 2, 0), ">75<");
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "R4", 1, 0));
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "R5", 0, 1));
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), ">75<");
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: false, symbolName: "P1"));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: false, symbolName: "P1"));
         }
 
         [TestMethod]
@@ -274,7 +274,7 @@ namespace GameHistory.Tests.OverlayTests
             // The two Wd tiles account for the 2 leftover shares, but Wd is not configured, so it is never overlaid.
             var overlay = CyberCashOverlay(MultiplierClaims.Shared);
 
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "Wd", 0, 0));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: false, symbolName: ""));
         }
 
         [TestMethod]
@@ -287,9 +287,9 @@ namespace GameHistory.Tests.OverlayTests
             var overlay = OverlayWithEntries(mapping, computed, Grid(Reel("P1", "P1", "P1")), gate: false,
                 new RecordedScatterWin(150m, 2));
 
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 0, 0), PaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 0, 1), PaidColour);
-            StringAssert.Contains(overlay.BuildTile(Url, "P1", 0, 2), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), PaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), PaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 75m), UnpaidColour);
         }
 
         [TestMethod]
@@ -304,8 +304,8 @@ namespace GameHistory.Tests.OverlayTests
             var overlay = OverlayWithEntries(mapping, computed, Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")), gate: false,
                 new RecordedScatterWin(300m, 3));
 
-            StringAssert.Contains(overlay.BuildTile(Url, "Wh", 2, 0), UnpaidColour);
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "Wh", 0, 0));
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: true, symbolName: "Wh"), UnpaidColour);
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 300m, renderOverlay: false, symbolName: "Wh"));
         }
 
         // ----- TotalScatterWin: exempt from amount matching -----------------------------------------
@@ -326,8 +326,8 @@ namespace GameHistory.Tests.OverlayTests
             var overlay = OverlayWithEntries(mapping, computed, Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")), gate: false,
                 new RecordedScatterWin(300m, 3));
 
-            StringAssert.Contains(overlay.BuildTile(Url, "Wh", 2, 0), PaidColour);   // result tile
-            StringAssert.Contains(overlay.BuildTile(Url, "Wh", 2, 0), ">300<");
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 300m), PaidColour);   // result tile
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 300m), ">300<");
         }
 
         [TestMethod]
@@ -338,7 +338,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "Wh", 300m } };
             var overlay = OverlayWithEntries(mapping, computed, Grid(Reel("Wh"), Reel("Wh"), Reel("Wh")), gate: false);
 
-            StringAssert.Contains(overlay.BuildTile(Url, "Wh", 2, 0), UnpaidColour);
+            StringAssert.Contains(overlay.BuildTile(Url, overlayAmount: 300m), UnpaidColour);
         }
     }
 }

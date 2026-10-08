@@ -143,9 +143,9 @@ namespace GameHistory.Tests.OverlayTests
                     }
                 }
             };
-            var tile = renderer.BeginSpin(spin, "details", reader).BuildTile("~/img/B10.png", "B10", 0, 0);
+            var tile = renderer.BeginSpin(spin, "details", reader).BuildTile("~/img/B10.png", overlayAmount: 20m);
 
-            StringAssert.Contains(tile, ">20<");   // total bet 2 * value 10
+            StringAssert.Contains(tile, ">20<");
         }
 
         [TestMethod]

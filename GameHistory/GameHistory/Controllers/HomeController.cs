@@ -282,7 +282,7 @@ namespace GameHistory.Controllers
                                         // For a configured multiplier symbol the finalised amount is overlaid on the tile;
                                         // every other symbol renders exactly as before.
                                         html += spinOverlay != null
-                                            ? spinOverlay.BuildTile(symbolUrl, floorItem.SymbolName, reelIdx, floorIdx, MULTIPLIER_DUMMY_VALUE)
+                                            ? spinOverlay.BuildTile(symbolUrl, overlayAmount: MULTIPLIER_DUMMY_VALUE, renderOverlay: true, symbolName: floorItem.SymbolName)
                                             : SpinOverlay.PlainTile(symbolUrl);
                                     html += "</tr>";
                                     html += "<br/>";

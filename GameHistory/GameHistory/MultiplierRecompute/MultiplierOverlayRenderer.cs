@@ -207,9 +207,10 @@ namespace GameHistory.MultiplierRecompute
         /// the plain symbol image is returned unchanged. <paramref name="symbolUrl"/> must already be resolved via
         /// Url.Content.
         /// </summary>
-        public string BuildTile(string symbolUrl, string symbolName, int reelIndex, int floorIndex, decimal? dummyValue = null)
+        public string BuildTile(string symbolUrl, decimal? overlayAmount = null, bool renderOverlay = true, string symbolName = "")
         {
-            return BuildMultiplierTile(symbolUrl, symbolName, _ctx, reelIndex, floorIndex, _onceOverlayCells, _recordedGate, dummyValue);
+            return renderOverlay ? BuildMultiplierTile(symbolUrl, overlayAmount, _ctx, symbolName)
+                                : PlainTile(symbolUrl);
         }
 
         /// <summary>The plain (no-overlay) tile markup — a bare symbol image. The single definition of that markup,
@@ -321,72 +322,21 @@ namespace GameHistory.MultiplierRecompute
         /// </summary>
         private static string BuildMultiplierTile(
             string symbolUrl,
-            string symbolName,
+            decimal? overlayAmount,
             MultiplierOverlayContext ctx,
-            int reelIndex,
-            int floorIndex,
-            Dictionary<string, GridCell> onceOverlayCells,
-            RecordedOverlayGate recordedGate,
-            decimal? dummyValue)
+            string symbolName)
         {
             // Fallback in case the symbol is not in the mapping or has no computed amount: render the plain symbol image.
             decimal amount;
-            if (ctx == null
-                || string.IsNullOrEmpty(symbolName)
-                || !ctx.Mapping.TryGet(symbolName, out MultiplierParams p)
-                || !ctx.InScope(p)
-                || !ctx.Computed.TryGetValue(symbolName, out amount))
+            if (overlayAmount != null) amount = (decimal)overlayAmount;
+            else amount = 0;
+
+            RenderStyle style = RenderStyle.Default;
+            if (ctx.Mapping.TryGet(symbolName, out MultiplierParams p))
             {
-                return PlainTile(symbolUrl);
+                style = amount == 0 ? p.UnpaidStyle: p.PaidStyle;
             }
 
-            if (dummyValue != null) amount = (decimal) dummyValue;
-
-            // "Once" placement: draw the overlay only on the resolved winning cell for this group; every other
-            // in-group occurrence (e.g. the two trigger 'Wh' symbols) renders as the plain symbol image.
-            if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
-            {
-                if (onceOverlayCells == null
-                    || !onceOverlayCells.TryGetValue(p.GroupName ?? symbolName, out var winner)
-                    || winner.Reel != reelIndex
-                    || winner.Floor != floorIndex)
-                {
-                    return PlainTile(symbolUrl);
-                }
-            }
-
-            // Did THIS occurrence pay this spin? A statically-unpaid (TB) symbol never does. A paid-class symbol
-            // does when the recorded located-scatter outcome confirms it (its cell, or its group for a "once"
-            // placement, was matched by ResolveRecordedOverlayGate). A null gate means the outcome could not be
-            // read -> fail open: treat as paid (paid look, and never suppressed) rather than dim/hide a possibly
-            // -real win.
-            bool paidThisSpin;
-            if (recordedGate == null)
-            {
-                paidThisSpin = true;
-            }
-            else if (p.Placement == MultiplierOverlayPlacement.OnceOnLastOccurrence)
-            {
-                paidThisSpin = p.Paid && recordedGate.MatchedOnceGroups.Contains(p.GroupName ?? symbolName);
-            }
-            else
-            {
-                paidThisSpin = p.Paid && recordedGate.MatchedCells.Contains(new GridCell(reelIndex, floorIndex));
-            }
-
-            // Recorded-outcome gate (global "MultiplierRecompute.GateOverlayOnRecordedWin"). When ON, a non-paying
-            // occurrence is suppressed entirely (plain image) and only payers render — so the unpaid style is never
-            // reached in this mode. When OFF, nothing is suppressed here: both payers and non-payers render, and are
-            // told apart below by the paid vs unpaid style.
-            if (ctx.GateOnRecordedWin && !paidThisSpin)
-            {
-                return PlainTile(symbolUrl);
-            }
-
-            // Pick the render style by whether this occurrence paid. Both styles are fully resolved on the params
-            // (unpaid falls back to paid unless the config supplied a distinct unpaid delta), so an un-styled config
-            // yields the historical look for every tile.
-            RenderStyle style = paidThisSpin ? p.PaidStyle : p.UnpaidStyle;
 
             string text = HttpUtility.HtmlEncode(FormatOverlayAmount(amount));
             var sb = new StringBuilder();

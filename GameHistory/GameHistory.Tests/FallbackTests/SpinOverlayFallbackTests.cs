@@ -47,7 +47,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("X")));
 
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "X", 0, 0));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: true, symbolName: "B10"));
         }
 
         [TestMethod]
@@ -58,7 +58,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal>();   // nothing computed this round
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")));
 
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "B10", 0, 0));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: true, symbolName: "B10"));
         }
 
         [TestMethod]
@@ -69,7 +69,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")));
 
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "", 0, 0));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: true, symbolName: "B10"));
         }
 
         [TestMethod]
@@ -81,7 +81,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")), gate: true);
 
-            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, "B10", 0, 0));
+            Assert.AreEqual(SpinOverlay.PlainTile(Url), overlay.BuildTile(Url, overlayAmount: 0, renderOverlay: true, symbolName: "B10"));
         }
 
         [TestMethod]
@@ -93,7 +93,7 @@ namespace GameHistory.Tests.OverlayTests
             var computed = new Dictionary<string, decimal> { { "B10", 250m } };
             var overlay = Overlay(mapping, computed, Grid(Reel("B10")));
 
-            var html = overlay.BuildTile(Url, "B10", 0, 0);
+            var html = overlay.BuildTile(Url, overlayAmount: 250m);
 
             Assert.AreNotEqual(SpinOverlay.PlainTile(Url), html);
             StringAssert.Contains(html, "250");
