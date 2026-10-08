@@ -246,8 +246,8 @@ namespace GameHistory.Controllers
                 {
                     data.GameHistoryDetailsMember.GameHistoryGameInfoSlotModel.Symbols = getSymbols(data.GameHistoryDetailsMember);
 
-                    // Multiplier recompute: compute the finalised amounts (and run the log-only validation). The
-                    // returned renderer drives the amount overlay in the tile loop below; null => render plain symbols.
+                    // Multiplier overlay: draws an amount on each tile in the loop below. Null when
+                    // "MultiplierRecompute.Enabled" is off => render plain symbols.
                     string gameName = slotRoundReader.GetGameName();
                     MultiplierOverlayRenderer overlay = MultiplierOverlayRenderer.TryCreate(slotRoundReader, Server.MapPath);
 
@@ -263,34 +263,25 @@ namespace GameHistory.Controllers
                             html += "<table align=\"center\">";
                             html += "<tr>";
 
-                            // Per-spin overlay plan: resolves the "once" winning cells and the recorded-outcome
-                            // paid/unpaid gate a single time for this spin, reused across every tile below. Null when
-                            // the feature is off/unconfigured (overlay == null) => tiles render plain.
-                            SpinOverlay spinOverlay = overlay?.BeginSpin(positionItem, slotDetailsItem.Details, slotRoundReader);
-
-                            int reelIdx = 0;
                             foreach (var reelItem in positionItem.Reels)
                             {
                                 html += "<td>";
                                 html += "<table>";
-                                int floorIdx = 0;
                                 foreach (var floorItem in reelItem.Floors)
                                 {
                                     html += "<tr margin=\"2px 2px 2px 2px\">";
                                     // Figuring out where the symbol images are stored based on the platform type sent from client
                                     string symbolUrl = Url.Content(floorItem.SymbolName.ToSlotSymbolUrl(gameName, platformType));
-                                        // For a configured multiplier symbol the finalised amount is overlaid on the tile;
-                                        // every other symbol renders exactly as before.
-                                        html += spinOverlay != null
-                                            ? spinOverlay.BuildTile(symbolUrl, overlayAmount: MULTIPLIER_DUMMY_VALUE, renderOverlay: true, symbolName: floorItem.SymbolName)
-                                            : SpinOverlay.PlainTile(symbolUrl);
+                                    // Every tile gets the overlay. The amount is a placeholder until the RGS supplies
+                                    // the real per-symbol values.
+                                    html += overlay != null
+                                        ? overlay.BuildTile(symbolUrl, overlayAmount: MULTIPLIER_DUMMY_VALUE, renderOverlay: true, symbolName: floorItem.SymbolName)
+                                        : MultiplierOverlayRenderer.PlainTile(symbolUrl);
                                     html += "</tr>";
                                     html += "<br/>";
-                                    floorIdx++;
                                 }
                                 html += "</table>";
                                 html += "</td>";
-                                reelIdx++;
                             }
 
                             html += "</tr>";

@@ -7,8 +7,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace GameHistory.Tests.FallbackTests
 {
     // Bad config files must degrade gracefully: an absent/empty config yields an empty mapping (which the renderer
-    // turns into "no overlay"), missing attributes are tolerated, and only outright malformed XML surfaces an error
-    // (which PrepareContext catches and turns into a plain render).
+    // treats as "default style"), missing attributes are tolerated, and only outright malformed XML surfaces an error
+    // (which the renderer catches and treats as "default style").
     [TestClass]
     public class MultiplierConfigParserFallbackTests
     {
@@ -51,36 +51,12 @@ namespace GameHistory.Tests.FallbackTests
         }
 
         [TestMethod]
-        public void A_group_missing_its_strategy_still_parses_but_the_symbol_resolves_no_strategy()
-        {
-            var mapping = Parse(
-                "<AgtReelConfig><GameHistoryConfig gameName=\"G\"><multiplierGroups>" +
-                "<group name=\"g1\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>" +
-                "</multiplierGroups></GameHistoryConfig></AgtReelConfig>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.IsNull(p.Strategy.Type);   // no strategy -> nothing to compute an amount with -> plain tile
-        }
-
-        [TestMethod]
-        public void A_symbol_missing_its_value_parses_with_a_null_multiplier()
-        {
-            var mapping = Parse(
-                "<AgtReelConfig><GameHistoryConfig gameName=\"G\"><multiplierGroups>" +
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" /></group>" +
-                "</multiplierGroups></GameHistoryConfig></AgtReelConfig>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.IsNull(p.Multiplier);
-        }
-
-        [TestMethod]
         public void A_symbol_missing_its_name_is_skipped()
         {
             var mapping = Parse(
                 "<AgtReelConfig><GameHistoryConfig gameName=\"G\"><multiplierGroups>" +
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
-                "<symbol value=\"5\" /><symbol name=\"B02\" value=\"2\" /></group>" +
+                "<group name=\"g1\">" +
+                "<symbol /><symbol name=\"B02\" /></group>" +
                 "</multiplierGroups></GameHistoryConfig></AgtReelConfig>");
 
             Assert.AreEqual(1, mapping.Mappings.Count);
@@ -90,7 +66,7 @@ namespace GameHistory.Tests.FallbackTests
         [TestMethod]
         public void Malformed_xml_throws_from_the_constructor()
         {
-            // The parser itself does not swallow a broken file; PrepareContext wraps this and renders plain.
+            // The parser itself does not swallow a broken file; the renderer catches this and uses the default style.
             var path = TempConfig("<AgtReelConfig><GameHistoryConfig></AgtReelConfig>");
 
             Assert.Throws<System.Xml.XmlException>(() => new MultiplierConfigParser(path));

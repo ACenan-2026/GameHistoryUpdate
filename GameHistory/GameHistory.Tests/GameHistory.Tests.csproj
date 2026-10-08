@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <!-- Framework assembly used directly by the tests. SDK-style .NET Framework projects do not reference
-       System.Configuration implicitly, and the PrepareContext/TryCreate tests drive ConfigurationManager
+       System.Configuration implicitly, and the TryCreate tests drive ConfigurationManager
        (appSettings) to exercise the renderer's config-gated entry point. -->
   <ItemGroup>
     <Reference Include="System.Configuration" />

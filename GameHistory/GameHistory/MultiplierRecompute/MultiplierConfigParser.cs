@@ -1,117 +1,33 @@
 ﻿using log4net;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
-using System;
 
 namespace GameHistory.MultiplierRecompute
 {
-
     /// <summary>
-    /// Encapsulates the strategy-based parameters needed to compute the base value for a multiplier symbol.
-    /// </summary>
-    public sealed class StrategySpec
-    {
-        public string Type { get;  }
-        public IReadOnlyDictionary<string, string> Attributes { get; }
-
-        public StrategySpec(string type, IReadOnlyDictionary<string, string> attributes)
-        {
-            Type = type;
-            Attributes = attributes;
-        }
-    }
-
-
-    /// <summary>
-    /// Controls how many of a multiplier symbol's on-grid occurrences carry the finalised-amount overlay.
-    ///  - <see cref="All"/>: overlay every occurrence (the default). Correct when each occurrence is an
-    ///    independent win, e.g. located scatters where B01, B10, B01 each paid their own amount.
-    ///  - <see cref="OnceOnLastOccurrence"/>: overlay a single occurrence per spin, on the LAST (right-most
-    ///    reel, then lowest floor) in-group tile. Use it when several tiles share one recorded win that was
-    ///    only won once — e.g. a wheel feature triggered by three 'Wh' symbols where only the last (result)
-    ///    symbol carries the multiplier and the recorded located-scatter win is a single amount. Painting it
-    ///    on every 'Wh' would imply the amount was won three times.
-    /// </summary>
-    public enum MultiplierOverlayPlacement
-    {
-        All,
-        OnceOnLastOccurrence
-    }
-
-    /// <summary>
-    /// Decides whether a multiplier symbol has the right to the entirety of a winning amount or a partial amount.
-    /// Motivated by the scatter-only game Cyber Cash, where a single located-scatter win is shared across several 
-    /// on-grid occurrences of the same symbol.
-    /// </summary>
-    public enum MultiplierClaims
-    {
-        Whole,      // The symbol claims the entire amount of a winning occurrence. This is the historical behaviour.
-        Shared      // The symbol claims a fraction of the amount of a winning occurrence, based on the number of symbols that contributed to the win.
-    }
-
-    /// <summary>
-    /// Represents the parameters associated with a multiplier symbol, including its multiplier value,
-    /// the strategy type used to compute its base value, and whether the symbol is considered "paid" or not.
-    /// <see cref="Paid"/>, <see cref="GroupName"/>, <see cref="Placement"/>, <see cref="PaidStyle"/> and
-    /// <see cref="UnpaidStyle"/> are group-level settings shared by every symbol in the same <group>: a group is
-    /// wholly paying or wholly non-paying, so <see cref="Paid"/> comes from the group's "paid" attribute rather
-    /// than the symbol's. <see cref="Placement"/> decides how many occurrences are overlaid and
-    /// <see cref="GroupName"/> lets the "once" placement dedupe across all members of a group (which may carry
-    /// different codes, e.g. Wh / Wh2 / Wh3).
-    /// <see cref="PaidStyle"/> is the overlay look for an occurrence that paid this spin; <see cref="UnpaidStyle"/>
-    /// is the look for one that did not (a statically-unpaid symbol, or a paid-class symbol whose spin did not
-    /// meet the trigger). Both are fully resolved (no null fields) so the render loop can emit them directly.
-    /// All of these fields are set via an XML configuration file and are immutable once the object is created.
+    /// The overlay look for one configured multiplier symbol. Both styles are group-level settings shared by every
+    /// symbol in the same &lt;group&gt;. <see cref="PaidStyle"/> is used for a non-zero overlay amount and
+    /// <see cref="UnpaidStyle"/> for a zero amount. Both are fully resolved (no null fields) so the renderer can
+    /// emit them directly. Set from the XML configuration file and immutable once created.
     /// </summary>
     public sealed class MultiplierParams
     {
-        /// <summary>
-        /// The multiplier factor for base×value strategies (TotalBet / LineBet*); null when the config's 'value'
-        /// was missing or non-integer. TotalScatterWin ignores this. A null makes a base×value strategy return no
-        /// amount, so the tile renders plain rather than a bogus figure.
-        /// </summary>
-        public int? Multiplier {  get; }
-        public bool Paid { get; }
-        public StrategySpec Strategy { get; }
-        public string GroupName { get; }
-        public MultiplierOverlayPlacement Placement { get; }
-        public MultiplierClaims Claims { get; }
-
-        public int PostWinDivider { get; } = 1;
         public RenderStyle PaidStyle { get; }
         public RenderStyle UnpaidStyle { get; }
 
-        public MultiplierParams(
-            int? multiplier,
-            bool paid,
-            StrategySpec strategy,
-            string groupName = null,
-            MultiplierOverlayPlacement placement = MultiplierOverlayPlacement.All,
-            MultiplierClaims claims = MultiplierClaims.Whole,
-            int postWinDivider = 1,
-            RenderStyle paidStyle = null,
-            RenderStyle unpaidStyle = null)
+        public MultiplierParams(RenderStyle paidStyle = null, RenderStyle unpaidStyle = null)
         {
-            Multiplier = multiplier;
-            Paid = paid;
-            Strategy = strategy;
-            GroupName = groupName;
-            Placement = placement;
-            Claims = claims;
-            PostWinDivider = postWinDivider > 0 ? postWinDivider : 1; // never 0: strategies divide by it
             // Resolve against the code default so these are never null and an un-styled group keeps the
             // historical look. UnpaidStyle falls back to PaidStyle (not Default) when no unpaid delta was
             // given, so paid and unpaid look identical unless the config asks for a distinction.
             PaidStyle = (paidStyle ?? new RenderStyle(null, null, null, null, null)).OverrideOnto(RenderStyle.Default);
             UnpaidStyle = (unpaidStyle ?? new RenderStyle(null, null, null, null, null)).OverrideOnto(PaidStyle);
         }
-
     }
 
     /// <summary>
-    /// Maps multiplier symbol names to their corresponding params (see <cref cref="MultiplierParams" />.
+    /// Maps multiplier symbol names to their corresponding params (see <see cref="MultiplierParams"/>).
     /// </summary>
     public class MultiplierSymbolMapping
     {
@@ -133,28 +49,23 @@ namespace GameHistory.MultiplierRecompute
             _mappings[symbol] = multiplierParams;
             return true;
         }
-
     }
 
     public interface IMultiplierConfigParser
     {
         /// <summary>
-        /// Parses the multiplier configuration XML and returns a mapping of symbols to their corresponding multiplier parameters.
-        /// Returns a MultiplierSymbolMapping object whose entries detail the multiplier value, strategy type, whether the
-        /// symbol is paid, and the group-level display settings (overlay placement, and the resolved paid/unpaid render
-        /// styles - see <see cref="MultiplierParams"/>).
-        /// If the XML structure is invalid or missing required attributes, those entries will be skipped.
-        /// 
-        /// Consider reading the corresponding documentation to understand the expected XML schema and attributes for proper configuration.
+        /// Parses the multiplier configuration XML and returns a mapping of symbols to their render styles
+        /// (see <see cref="MultiplierParams"/>). Symbols with no name are skipped.
+        ///
+        /// See MultiplierConfigSchema.md for the expected XML schema.
         /// </summary>
-        /// <returns><see cref="MultiplierSymbolMapping"/>MultiplierSymbolMapping</returns>
         MultiplierSymbolMapping GetMultiplierParams();
     }
 
     /// <summary>
-    /// Parses the multiplier configuration XML file to extract multiplier parameters for each symbol
+    /// Parses the multiplier configuration XML file to extract the render styles for each symbol.
     /// </summary>
-    public class MultiplierConfigParser : IMultiplierConfigParser 
+    public class MultiplierConfigParser : IMultiplierConfigParser
     {
         private static readonly ILog sLog = LogManager.GetLogger(typeof(MultiplierConfigParser));
 
@@ -164,48 +75,19 @@ namespace GameHistory.MultiplierRecompute
             _doc = XDocument.Load(path);
         }
 
-
         public MultiplierSymbolMapping GetMultiplierParams()
         {
             var multiplierMap = new MultiplierSymbolMapping();
-
-            // Game-level POST_WIN_DIVIDER (the .agm's `Ivar POST_WIN_DIVIDER = N`). The engine divides every win by
-            // N, so strategies that COMPUTE an amount divide by it too; strategies that READ a recorded win
-            // (TotalScatterWin) ignore it, as the recorded figure is already post-divider. Absent → 1 (no-op).
-            // Anything other than a positive integer is rejected (0 would divide by zero) and defaults to 1.
-            int postWinDivider = ParsePostWinDivider(_doc.Root?.Element("GameHistoryConfig")?.Attribute("postWinDivider")?.Value);
 
             var groups = _doc.Root?.Element("GameHistoryConfig")?.Element("multiplierGroups")?.Elements("group")
                          ?? Enumerable.Empty<XElement>();
 
             foreach (var groupElement in groups)
             {
-
                 string groupName = groupElement.Attribute("name")?.Value ?? "(unnamed)";
 
-                // creating a dictionary out of the current groupElement's attributes
-                string strategy = groupElement.Attribute("strategy")?.Value;
-
-                var attrs = groupElement.Attributes()
-                        .ToDictionary(a => a.Name.LocalName, a => a.Value, StringComparer.OrdinalIgnoreCase);
-                var spec = new StrategySpec(strategy, attrs);
-
-                if (string.IsNullOrEmpty(strategy))
-                {
-                    sLog.WarnFormat("Multiplier group '{0}' has no strategy; its symbols will not resolve a base value.", groupName);
-                }
-
-                MultiplierOverlayPlacement placement = ParsePlacement(groupElement.Attribute("overlay")?.Value, groupName);
-                MultiplierClaims claim = ParseClaim(groupElement.Attribute("claim")?.Value, groupName);
-
-                // Paid is a GROUP-level property: every symbol in a group shares one paid status, so a group is
-                // either wholly paying (B) or wholly non-paying (TB). This enforces that paid and unpaid symbols
-                // live in separate groups, which in turn lets each carry its own render style. A missing 'paid'
-                // attribute defaults to false (non-paying) and is warned, so a forgotten flag fails safe rather
-                // than silently promoting symbols to the paid style.
-                bool groupPaid = ParseGroupPaid(groupElement, groupName);
-
                 ParseGroupStyles(groupElement, groupName, out RenderStyle paidStyleDelta, out RenderStyle unpaidStyleDelta);
+                var mParams = new MultiplierParams(paidStyleDelta, unpaidStyleDelta);
 
                 foreach (var symbolElement in groupElement.Elements("symbol"))
                 {
@@ -216,22 +98,6 @@ namespace GameHistory.MultiplierRecompute
                         continue;
                     }
 
-                    if (symbolElement.Attribute("paid") != null)
-                    {
-                        sLog.WarnFormat("Symbol '{0}' in group '{1}' has a per-symbol 'paid' attribute; it is ignored — 'paid' is now set on the <group>.", symbol, groupName);
-                    }
-                    // The multiplier factor for base×value strategies (TotalBet / LineBet*). A missing or
-                    // non-integer 'value' becomes null instead of a silent sentinel: a base×value strategy then
-                    // computes no amount and the tile renders plain (also surfaced by the Phase 1 validator),
-                    // while TotalScatterWin — which ignores 'value' — is unaffected.
-                    string rawValue = symbolElement.Attribute("value")?.Value;
-                    int? multiplier = int.TryParse(rawValue, out var m) ? m : (int?)null;
-                    if (multiplier == null)
-                    {
-                        sLog.WarnFormat("Symbol '{0}' in group '{1}' has a missing/invalid 'value' ('{2}'); no base×value overlay amount will be computed (TotalScatterWin ignores 'value').", symbol, groupName, rawValue ?? "(absent)");
-                    }
-
-                    var mParams= new MultiplierParams(multiplier, groupPaid, spec, groupName, placement, claim, postWinDivider, paidStyleDelta, unpaidStyleDelta);
                     if (!multiplierMap.Insert(symbol, mParams))
                     {
                         sLog.WarnFormat("Duplicate multiplier symbol '{0}' in group '{1}' ignored; first definition kept.", symbol, groupName);
@@ -242,89 +108,11 @@ namespace GameHistory.MultiplierRecompute
         }
 
         /// <summary>
-        /// Parses the optional game-level "postWinDivider" attribute on <GameHistoryConfig>. Absent/empty
-        /// -> 1 (no divider, silently — most games have none). A value that is not a positive integer ("0",
-        /// "-5", "abc") is warned and defaults to 1: 0 would divide by zero, and a garbled value should surface
-        /// in the log rather than silently skew every computed amount.
-        /// </summary>
-        internal static int ParsePostWinDivider(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return 1;
-
-            if (int.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int divider) && divider > 0)
-            {
-                return divider;
-            }
-
-            sLog.WarnFormat("GameHistoryConfig has invalid postWinDivider '{0}' (must be a positive integer); defaulting to 1.", raw);
-            return 1;
-        }
-
-        /// <summary>
-        /// Parses the optional group-level "overlay" attribute into a <see cref="MultiplierOverlayPlacement"/>.
-        /// Absent/empty or "all" -> <see cref="MultiplierOverlayPlacement.All"/> (the default, every occurrence
-        /// overlaid). "once"/"onceLast"/"onceOnLastOccurrence" -> overlay a single occurrence per spin on the
-        /// last in-group tile. An unrecognised value is treated as All and warned, so a typo degrades to the
-        /// safe, historical behaviour rather than silently suppressing overlays.
-        /// </summary>
-        private static MultiplierOverlayPlacement ParsePlacement(string raw, string groupName)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return MultiplierOverlayPlacement.All;
-
-            switch (raw.Trim().ToLowerInvariant())
-            {
-                case "all":
-                    return MultiplierOverlayPlacement.All;
-                case "once":
-                case "oncelast":
-                case "onceonlastoccurrence":
-                    return MultiplierOverlayPlacement.OnceOnLastOccurrence;
-                default:
-                    sLog.WarnFormat("Multiplier group '{0}' has unrecognised overlay '{1}'; defaulting to 'all'.", groupName, raw);
-                    return MultiplierOverlayPlacement.All;
-            }
-        }
-
-        private static MultiplierClaims ParseClaim(string raw, string groupName)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return MultiplierClaims.Whole;
-
-            switch (raw.Trim().ToLowerInvariant())
-            {
-                case "whole":
-                    return MultiplierClaims.Whole;
-                case "shared":
-                    return MultiplierClaims.Shared;
-                default:
-                    sLog.WarnFormat("Multiplier group '{0}' has unrecognised claim value '{1}'; defaulting to 'whole'.", groupName, raw);
-                    return MultiplierClaims.Whole;
-            }
-        }
-
-        /// <summary>
-        /// Reads the group-level "paid" attribute. A group is wholly paying (true) or wholly non-paying (false),
-        /// which enforces that paid (B) and unpaid (TB) symbols live in separate groups. Absent or unparseable
-        /// defaults to false and is warned, so a group that forgot the flag renders its symbols in the non-paying
-        /// (unpaid) style rather than being silently promoted to the paid style.
-        /// </summary>
-        private static bool ParseGroupPaid(XElement groupElement, string groupName)
-        {
-            string raw = groupElement.Attribute("paid")?.Value;
-            if (bool.TryParse(raw, out bool paid))
-            {
-                return paid;
-            }
-
-            sLog.WarnFormat("Multiplier group '{0}' has no valid group-level 'paid' attribute ('{1}'); defaulting to false (non-paying).", groupName, raw ?? "(absent)");
-            return false;
-        }
-
-        /// <summary>
-        /// Reads a group's optional <renderStyle> children into two style DELTAS: the base/paid look
-        /// (a <renderStyle> with no <c>state</c>, or <c>state="paid"</c>) and the unpaid look
+        /// Reads a group's optional &lt;renderStyle&gt; children into two style DELTAS: the base/paid look
+        /// (a &lt;renderStyle&gt; with no <c>state</c>, or <c>state="paid"</c>) and the unpaid look
         /// (<c>state="unpaid"</c>). Both are returned as sparse deltas (unset attributes are null); the
         /// concrete styles are resolved later in <see cref="MultiplierParams"/> (paid over the code default,
-        /// unpaid over paid). A group with no <renderStyle> yields empty deltas, i.e. the historical look.
+        /// unpaid over paid). A group with no &lt;renderStyle&gt; yields empty deltas, i.e. the historical look.
         /// First definition wins if a state is declared more than once, matching the symbol first-wins rule.
         /// </summary>
         private static void ParseGroupStyles(XElement groupElement, string groupName, out RenderStyle paidDelta, out RenderStyle unpaidDelta)

@@ -2,23 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using GameHistory.Models;
 using GameHistory.MultiplierRecompute;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GameHistory.Tests.OverlayTests
 {
-    // Covers MultiplierOverlayRenderer.TryCreate / PrepareContext / ResolveGameConfigRoot — the config-and-filesystem
+    // Covers MultiplierOverlayRenderer.TryCreate / LoadMapping / ResolveGameConfigRoot, the config-and-filesystem
     // entry point. These tests drive the real ConfigurationManager appSettings (from the isolated test App.config,
     // overridden per test at runtime) and real temp <Game>_reels.xml files on disk.
+    //
+    // Whether the config was loaded is observed through the overlay colour: the test config styles B10 with
+    // ConfigColour, so a tile in that colour proves the config was found and parsed, and a tile in the default
+    // colour proves the renderer fell back.
     //
     // appSettings is process-global; MSTest runs tests in an assembly sequentially by default, so each test sets the
     // keys it needs up-front and these do not interfere. TestCleanup restores the feature-off baseline and deletes
     // the temp config trees.
     [TestClass]
-    public class MultiplierOverlayRendererPrepareContextTests
+    public class MultiplierOverlayRendererTryCreateTests
     {
         private const string Game = "TestGame";
+        private const string ConfigColour = "#ABCDEF";
+        private const string TileUrl = "~/img/B10.png";
         private readonly List<string> _tempDirs = new List<string>();
 
         [TestCleanup]
@@ -26,7 +31,6 @@ namespace GameHistory.Tests.OverlayTests
         {
             // Restore the App.config baseline so nothing leaks into another test.
             SetAppSetting("MultiplierRecompute.Enabled", "false");
-            SetAppSetting("MultiplierRecompute.GateOverlayOnRecordedWin", "false");
             SetAppSetting("MultiplierRecompute.GameConfigRoot", "");
 
             foreach (var d in _tempDirs)
@@ -47,10 +51,12 @@ namespace GameHistory.Tests.OverlayTests
 
         private const string ValidReels =
             "<AgtReelConfig><GameHistoryConfig gameName=\"" + Game + "\"><multiplierGroups>" +
-            "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B10\" value=\"10\" /></group>" +
+            "<group name=\"g1\"><renderStyle color=\"" + ConfigColour + "\" /><symbol name=\"B10\" /></group>" +
             "</multiplierGroups></GameHistoryConfig></AgtReelConfig>";
 
         private const string EmptyReels = "<AgtReelConfig><agtReels /></AgtReelConfig>";
+
+        private const string MalformedReels = "<AgtReelConfig><GameHistoryConfig></AgtReelConfig>";
 
         // Creates a fresh temp directory to serve as a GameConfig root; registered for cleanup.
         private string NewRoot()
@@ -69,14 +75,35 @@ namespace GameHistory.Tests.OverlayTests
             File.WriteAllText(Path.Combine(dir, Game + "_reels.xml"), xml);
         }
 
-        private static FakeRoundReader Reader(string gameName = Game, decimal? totalBet = 2m) =>
-            new FakeRoundReader { GameName = gameName, TotalBet = totalBet };
+        // Enables the feature and points it at a fresh root containing the given config (or none when null).
+        private string EnabledWithConfig(string xml)
+        {
+            SetAppSetting("MultiplierRecompute.Enabled", "true");
+            var root = NewRoot();
+            if (xml != null) WriteReels(root, xml);
+            SetAppSetting("MultiplierRecompute.GameConfigRoot", root);
+            return root;
+        }
+
+        private static FakeRoundReader Reader(string gameName = Game) => new FakeRoundReader { GameName = gameName };
+
+        private static string B10Tile(MultiplierOverlayRenderer renderer) =>
+            renderer.BuildTile(TileUrl, overlayAmount: 1.23m, symbolName: "B10");
+
+        // Asserts the renderer exists, still overlays, and fell back to the default style (config not used).
+        private static void AssertDefaultStyleRenderer(MultiplierOverlayRenderer renderer)
+        {
+            Assert.IsNotNull(renderer);
+            var tile = B10Tile(renderer);
+            StringAssert.Contains(tile, ">1.23<");
+            StringAssert.Contains(tile, "color:" + RenderStyle.Default.Color);
+        }
 
         // mapPath used when no "~" resolution is expected; throws so a test notices if it is unexpectedly invoked.
         private static readonly Func<string, string> UnusedMapPath =
             _ => throw new InvalidOperationException("mapPath should not be called for an absolute config root");
 
-        // ----- the Enabled gate --------------------------------------------------------------------
+        // ----- the Enabled switch ------------------------------------------------------------------
 
         [TestMethod]
         public void TryCreate_returns_null_when_the_feature_is_disabled()
@@ -87,73 +114,31 @@ namespace GameHistory.Tests.OverlayTests
         }
 
         [TestMethod]
-        public void TryCreate_returns_null_when_the_game_name_is_empty()
+        public void TryCreate_returns_null_when_the_feature_is_disabled_even_with_a_valid_config()
         {
-            SetAppSetting("MultiplierRecompute.Enabled", "true");
-            var root = NewRoot();
-            WriteReels(root, ValidReels);
-            SetAppSetting("MultiplierRecompute.GameConfigRoot", root);
-
-            Assert.IsNull(MultiplierOverlayRenderer.TryCreate(Reader(gameName: ""), _ => root));
-        }
-
-        // ----- config resolution / presence --------------------------------------------------------
-
-        [TestMethod]
-        public void TryCreate_returns_null_when_the_config_file_is_missing()
-        {
-            SetAppSetting("MultiplierRecompute.Enabled", "true");
-            var root = NewRoot();   // exists, but no <Game>_reels.xml written
-            SetAppSetting("MultiplierRecompute.GameConfigRoot", root);
+            EnabledWithConfig(ValidReels);
+            SetAppSetting("MultiplierRecompute.Enabled", "false");
 
             Assert.IsNull(MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath));
         }
 
-        [TestMethod]
-        public void TryCreate_returns_null_when_the_config_has_no_multiplier_symbols()
-        {
-            SetAppSetting("MultiplierRecompute.Enabled", "true");
-            var root = NewRoot();
-            WriteReels(root, EmptyReels);
-            SetAppSetting("MultiplierRecompute.GameConfigRoot", root);
-
-            Assert.IsNull(MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath));
-        }
+        // ----- a valid config is used --------------------------------------------------------------
 
         [TestMethod]
-        public void TryCreate_with_a_valid_absolute_root_returns_a_renderer_that_overlays_the_amount()
+        public void TryCreate_with_a_valid_absolute_root_uses_the_configured_style()
         {
-            SetAppSetting("MultiplierRecompute.Enabled", "true");
-            var root = NewRoot();
-            WriteReels(root, ValidReels);
-            SetAppSetting("MultiplierRecompute.GameConfigRoot", root);
+            EnabledWithConfig(ValidReels);
 
-            var renderer = MultiplierOverlayRenderer.TryCreate(Reader(totalBet: 2m), UnusedMapPath);
+            var renderer = MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath);
 
             Assert.IsNotNull(renderer);
-
-            var reader = Reader(totalBet: 2m);
-            var spin = new SlotSymbolTableViewModel
-            {
-                Reels = new List<SlotSymbolReelViewModel>
-                {
-                    new SlotSymbolReelViewModel("r")
-                    {
-                        Floors = new List<SlotSymbolViewModel> { new SlotSymbolViewModel { SymbolName = "B10" } }
-                    }
-                }
-            };
-            var tile = renderer.BeginSpin(spin, "details", reader).BuildTile("~/img/B10.png", overlayAmount: 20m);
-
-            StringAssert.Contains(tile, ">20<");
+            StringAssert.Contains(B10Tile(renderer), "color:" + ConfigColour);
         }
 
         [TestMethod]
         public void TryCreate_resolves_an_app_relative_config_root_via_mapPath()
         {
-            SetAppSetting("MultiplierRecompute.Enabled", "true");
-            var root = NewRoot();
-            WriteReels(root, ValidReels);
+            var root = EnabledWithConfig(ValidReels);
             SetAppSetting("MultiplierRecompute.GameConfigRoot", "~/GameConfig");
 
             // The "~/..." root must be resolved through the injected mapPath delegate.
@@ -168,7 +153,7 @@ namespace GameHistory.Tests.OverlayTests
             var renderer = MultiplierOverlayRenderer.TryCreate(Reader(), mapPath);
 
             Assert.IsTrue(mapPathCalled);
-            Assert.IsNotNull(renderer);
+            StringAssert.Contains(B10Tile(renderer), "color:" + ConfigColour);
         }
 
         [TestMethod]
@@ -176,7 +161,7 @@ namespace GameHistory.Tests.OverlayTests
         {
             SetAppSetting("MultiplierRecompute.Enabled", "true");
             // Empty (not removed) forces the fallback branch: ResolveGameConfigRoot treats a null/whitespace value
-            // as "unset". We must not Remove() the key — ConfigurationManager.AppSettings.Remove() also mutates the
+            // as "unset". We must not Remove() the key: ConfigurationManager.AppSettings.Remove() also mutates the
             // underlying (read-only at runtime) config element and throws, whereas Set() only touches the in-memory
             // collection.
             SetAppSetting("MultiplierRecompute.GameConfigRoot", "");
@@ -187,11 +172,43 @@ namespace GameHistory.Tests.OverlayTests
             Directory.CreateDirectory(appRoot);
             WriteReels(Path.Combine(baseDir, "wwwroot", "GameConfig"), ValidReels);
 
-            Func<string, string> mapPath = p => p == "~" ? appRoot : appRoot;
+            var renderer = MultiplierOverlayRenderer.TryCreate(Reader(), _ => appRoot);
 
-            var renderer = MultiplierOverlayRenderer.TryCreate(Reader(), mapPath);
+            StringAssert.Contains(B10Tile(renderer), "color:" + ConfigColour);
+        }
 
-            Assert.IsNotNull(renderer);
+        // ----- no usable config: still overlays, in the default style -------------------------------
+
+        [TestMethod]
+        public void TryCreate_overlays_with_the_default_style_when_the_game_name_is_empty()
+        {
+            var root = EnabledWithConfig(ValidReels);
+
+            AssertDefaultStyleRenderer(MultiplierOverlayRenderer.TryCreate(Reader(gameName: ""), _ => root));
+        }
+
+        [TestMethod]
+        public void TryCreate_overlays_with_the_default_style_when_the_config_file_is_missing()
+        {
+            EnabledWithConfig(null);   // root exists, but no <Game>_reels.xml written
+
+            AssertDefaultStyleRenderer(MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath));
+        }
+
+        [TestMethod]
+        public void TryCreate_overlays_with_the_default_style_when_the_config_has_no_multiplier_symbols()
+        {
+            EnabledWithConfig(EmptyReels);
+
+            AssertDefaultStyleRenderer(MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath));
+        }
+
+        [TestMethod]
+        public void TryCreate_overlays_with_the_default_style_when_the_config_is_malformed()
+        {
+            EnabledWithConfig(MalformedReels);
+
+            AssertDefaultStyleRenderer(MultiplierOverlayRenderer.TryCreate(Reader(), UnusedMapPath));
         }
     }
 }

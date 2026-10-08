@@ -4,29 +4,16 @@ using System.Collections.Generic;
 namespace GameHistory.MultiplierRecompute
 {
     /// <summary>
-    /// <see cref="SlotRoundReader"/> — simple, null-safe accessors over the pulled round model
-    /// (<see cref="GameHistoryGameInfoModel"/>). The recorded scatter-win parsing lives in the sibling partial,
-    /// SlotRoundReader.Scatter.cs.
+    /// <see cref="SlotRoundReader"/>: simple, null-safe accessors over the pulled round model
+    /// (<see cref="GameHistoryGameInfoModel"/>).
     /// </summary>
-    public partial class SlotRoundReader : ISlotRoundReader
+    public class SlotRoundReader : ISlotRoundReader
     {
         private readonly GameHistoryGameInfoModel _gameInfo;
 
         public SlotRoundReader(GameHistoryGameInfoModel gameInfo)
         {
             _gameInfo = gameInfo;
-        }
-
-        public decimal? GetTotalBet()
-        {
-            return ComputationHelpers.TryParseMoney(_gameInfo?.GameHistoryGameInfoSlotModel?.Bet, out decimal totalBet)
-                ? totalBet
-                : (decimal?)null;
-        }
-
-        public List<SlotUserPositionKeyValuePair> GetUserPositionDict()
-        {
-            return _gameInfo?.UserPositions?.SlotUsersPositionsAndDetails?.SlotUserPositionDict;
         }
 
         public List<GameHistorySlotPositionDetailModel> GetSlotDetails()

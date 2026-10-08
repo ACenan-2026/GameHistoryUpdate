@@ -6,10 +6,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace GameHistory.Tests
 {
-    // Positive-parse coverage for MultiplierConfigParser: the group-level attributes (paid, overlay placement),
-    // the renderStyle deltas (paid/unpaid/dup/unknown state), and the symbol-level rules (duplicate first-wins,
-    // per-symbol 'paid' ignored, unnamed group). The bad-file/degradation paths live in
-    // FallbackTests/MultiplierConfigParserFallbackTests.
+    // Positive-parse coverage for MultiplierConfigParser: the renderStyle deltas (paid/unpaid/dup/unknown state)
+    // and the symbol-level rules (duplicate first-wins, unnamed group, shared group style, legacy attributes
+    // ignored). The bad-file/degradation paths live in FallbackTests/MultiplierConfigParserFallbackTests.
     [TestClass]
     public class MultiplierConfigParserTests
     {
@@ -41,181 +40,16 @@ namespace GameHistory.Tests
                   + groupsXml +
                   "</multiplierGroups></GameHistoryConfig></AgtReelConfig>");
 
-        // ----- overlay placement -------------------------------------------------------------------
-
-        [TestMethod]
-        public void Overlay_absent_defaults_to_all()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierOverlayPlacement.All, p.Placement);
-        }
-
-        [TestMethod]
-        public void Overlay_all_parses_to_all()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" overlay=\"all\"><symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierOverlayPlacement.All, p.Placement);
-        }
-
-        [DataTestMethod]
-        [DataRow("once")]
-        [DataRow("onceLast")]
-        [DataRow("onceOnLastOccurrence")]
-        [DataRow("ONCE")]        // case-insensitive
-        public void Overlay_once_synonyms_parse_to_once_on_last_occurrence(string overlay)
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" overlay=\"" + overlay + "\">" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierOverlayPlacement.OnceOnLastOccurrence, p.Placement);
-        }
-
-        [TestMethod]
-        public void Overlay_unrecognised_value_degrades_to_all()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" overlay=\"sometimes\">" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierOverlayPlacement.All, p.Placement);
-        }
-
-        // ----- claim mode --------------------------------------------------------------------------
-
-        [TestMethod]
-        public void Claim_absent_defaults_to_whole()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
-        }
-
-        [TestMethod]
-        public void Claim_whole_parses_to_whole()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" claim=\"whole\"><symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
-        }
-
-        [DataTestMethod]
-        [DataRow("shared")]
-        [DataRow("SHARED")]
-        [DataRow(" Shared ")]
-        public void Claim_shared_parses_case_and_whitespace_insensitively(string claim)
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"LineBetStaticMultNoLines\" staticBetMultiplier=\"50\" paid=\"true\" claim=\"" + claim + "\">" +
-                "<symbol name=\"P1\" value=\"500\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("P1", out var p));
-            Assert.AreEqual(MultiplierClaims.Shared, p.Claims);
-        }
-
-        [DataTestMethod]
-        [DataRow("share")]      // near-miss of "shared"
-        [DataRow("split")]
-        [DataRow("   ")]        // whitespace-only is treated as absent
-        public void Claim_unrecognised_or_blank_value_degrades_to_whole(string claim)
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\" claim=\"" + claim + "\">" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
-        }
-
-        [TestMethod]
-        public void Claim_is_group_level_and_applies_to_every_symbol_in_the_group()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"coins\" strategy=\"TotalBet\" paid=\"true\" claim=\"shared\">" +
-                "<symbol name=\"P1\" value=\"500\" /><symbol name=\"R5\" value=\"1\" /></group>" +
-                "<group name=\"located\" strategy=\"TotalBet\" paid=\"true\">" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("P1", out var p1));
-            Assert.IsTrue(mapping.TryGet("R5", out var r5));
-            Assert.IsTrue(mapping.TryGet("B01", out var b01));
-            Assert.AreEqual(MultiplierClaims.Shared, p1.Claims);
-            Assert.AreEqual(MultiplierClaims.Shared, r5.Claims);
-            Assert.AreEqual(MultiplierClaims.Whole, b01.Claims);   // other groups keep the default
-        }
-
-        [TestMethod]
-        public void MultiplierParams_defaults_claims_to_whole()
-        {
-            var p = new MultiplierParams(1, paid: true, strategy: new StrategySpec("TotalBet", new Dictionary<string, string>()));
-
-            Assert.AreEqual(MultiplierClaims.Whole, p.Claims);
-        }
-
-        // ----- group paid --------------------------------------------------------------------------
-
-        [TestMethod]
-        public void Group_paid_true_makes_its_symbols_paid()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.IsTrue(p.Paid);
-        }
-
-        [TestMethod]
-        public void Group_paid_false_makes_its_symbols_unpaid()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"false\"><symbol name=\"TB\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("TB", out var p));
-            Assert.IsFalse(p.Paid);
-        }
-
-        [TestMethod]
-        public void Group_with_no_paid_attribute_defaults_to_unpaid()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\"><symbol name=\"TB\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("TB", out var p));
-            Assert.IsFalse(p.Paid);
-        }
-
-        [TestMethod]
-        public void Group_with_an_unparseable_paid_attribute_defaults_to_unpaid()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"yes\"><symbol name=\"TB\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("TB", out var p));
-            Assert.IsFalse(p.Paid);
-        }
-
         // ----- group render styles -----------------------------------------------------------------
 
         [TestMethod]
         public void Paid_and_unpaid_render_styles_are_parsed_onto_the_params()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<group name=\"g1\">" +
                 "<renderStyle state=\"paid\" color=\"#FF0000\" />" +
                 "<renderStyle state=\"unpaid\" color=\"#00FF00\" />" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
+                "<symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             Assert.AreEqual("#FF0000", p.PaidStyle.Color);
@@ -227,9 +61,9 @@ namespace GameHistory.Tests
         {
             // Only a paid renderStyle is declared; the unpaid look falls back to it (see MultiplierParams ctor).
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<group name=\"g1\">" +
                 "<renderStyle state=\"paid\" color=\"#123456\" />" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
+                "<symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             Assert.AreEqual("#123456", p.PaidStyle.Color);
@@ -240,9 +74,9 @@ namespace GameHistory.Tests
         public void A_stateless_render_style_is_treated_as_the_paid_style()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<group name=\"g1\">" +
                 "<renderStyle color=\"#ABCDEF\" />" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
+                "<symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             Assert.AreEqual("#ABCDEF", p.PaidStyle.Color);
@@ -252,10 +86,10 @@ namespace GameHistory.Tests
         public void Duplicate_paid_render_style_keeps_the_first()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<group name=\"g1\">" +
                 "<renderStyle state=\"paid\" color=\"#111111\" />" +
                 "<renderStyle state=\"paid\" color=\"#222222\" />" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
+                "<symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             Assert.AreEqual("#111111", p.PaidStyle.Color);
@@ -265,9 +99,9 @@ namespace GameHistory.Tests
         public void Unknown_render_style_state_is_ignored_and_the_look_stays_default()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
+                "<group name=\"g1\">" +
                 "<renderStyle state=\"sideways\" color=\"#FF0000\" />" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
+                "<symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             // The bad block contributed nothing, so the style resolves to the historical default.
@@ -278,7 +112,7 @@ namespace GameHistory.Tests
         public void A_group_with_no_render_style_uses_the_default_look()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
+                "<group name=\"g1\"><symbol name=\"B01\" /></group>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
             Assert.AreEqual(RenderStyle.Default.Color, p.PaidStyle.Color);
@@ -291,66 +125,62 @@ namespace GameHistory.Tests
         public void Duplicate_symbol_keeps_the_first_definition()
         {
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
-                "<symbol name=\"B01\" value=\"1\" />" +
-                "<symbol name=\"B01\" value=\"9\" /></group>");
+                "<group name=\"g1\"><renderStyle color=\"#111111\" /><symbol name=\"B01\" /></group>" +
+                "<group name=\"g2\"><renderStyle color=\"#222222\" /><symbol name=\"B01\" /></group>");
 
             Assert.AreEqual(1, mapping.Mappings.Count);
             Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual(1, p.Multiplier);   // first definition kept
+            Assert.AreEqual("#111111", p.PaidStyle.Color);   // first definition kept
         }
 
         [TestMethod]
-        public void A_per_symbol_paid_attribute_is_ignored_in_favour_of_the_group()
+        public void An_unnamed_group_still_parses_its_symbols()
         {
-            // The symbol declares paid="false" but the group is paid="true"; the group wins (a warning is logged).
             var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"TotalBet\" paid=\"true\">" +
-                "<symbol name=\"B01\" value=\"1\" paid=\"false\" /></group>");
+                "<group><symbol name=\"B01\" /></group>");
+
+            Assert.IsTrue(mapping.TryGet("B01", out _));
+        }
+
+        [TestMethod]
+        public void Every_symbol_in_a_group_shares_the_group_style()
+        {
+            var mapping = ParseGroups(
+                "<group name=\"g1\"><renderStyle color=\"#FF0000\" />" +
+                "<symbol name=\"B01\" /><symbol name=\"B02\" /></group>" +
+                "<group name=\"g2\"><symbol name=\"TB\" /></group>");
+
+            Assert.AreEqual(3, mapping.Mappings.Count);
+            Assert.IsTrue(mapping.TryGet("B01", out var b01));
+            Assert.IsTrue(mapping.TryGet("B02", out var b02));
+            Assert.IsTrue(mapping.TryGet("TB", out var tb));
+            Assert.AreEqual("#FF0000", b01.PaidStyle.Color);
+            Assert.AreEqual("#FF0000", b02.PaidStyle.Color);
+            Assert.AreEqual(RenderStyle.Default.Color, tb.PaidStyle.Color);   // other groups are unaffected
+        }
+
+        [TestMethod]
+        public void Legacy_maths_attributes_are_tolerated_and_ignored()
+        {
+            // Configs written for the old recompute feature still carry strategy/paid/overlay/claim/value; they
+            // must still parse, with only the render styles taken.
+            var mapping = Parse(
+                "<AgtReelConfig><GameHistoryConfig gameName=\"G\" postWinDivider=\"2\"><multiplierGroups>" +
+                "<group name=\"g1\" overlay=\"once\" claim=\"shared\">" +
+                "<renderStyle color=\"#ABCDEF\" /><symbol name=\"B01\" value=\"5\" paid=\"false\" /></group>" +
+                "</multiplierGroups></GameHistoryConfig></AgtReelConfig>");
 
             Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.IsTrue(p.Paid);   // group-level paid, not the ignored per-symbol one
+            Assert.AreEqual("#ABCDEF", p.PaidStyle.Color);
         }
 
         [TestMethod]
-        public void An_unnamed_group_still_parses_its_symbols_under_a_placeholder_group_name()
+        public void MultiplierParams_with_no_styles_resolves_both_to_the_default_look()
         {
-            var mapping = ParseGroups(
-                "<group strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>");
+            var p = new MultiplierParams();
 
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual("(unnamed)", p.GroupName);
-        }
-
-        [TestMethod]
-        public void Multiple_groups_all_contribute_their_symbols_with_group_context()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"paidGrp\" strategy=\"TotalBet\" paid=\"true\"><symbol name=\"B01\" value=\"1\" /></group>" +
-                "<group name=\"unpaidGrp\" strategy=\"TotalBet\" paid=\"false\"><symbol name=\"TB\" value=\"1\" /></group>");
-
-            Assert.AreEqual(2, mapping.Mappings.Count);
-            Assert.IsTrue(mapping.TryGet("B01", out var paid));
-            Assert.IsTrue(mapping.TryGet("TB", out var unpaid));
-            Assert.AreEqual("paidGrp", paid.GroupName);
-            Assert.IsTrue(paid.Paid);
-            Assert.AreEqual("unpaidGrp", unpaid.GroupName);
-            Assert.IsFalse(unpaid.Paid);
-        }
-
-        [TestMethod]
-        public void Strategy_type_and_attributes_are_captured_on_each_symbol()
-        {
-            var mapping = ParseGroups(
-                "<group name=\"g1\" strategy=\"LineBetWithStaticMult\" paid=\"true\" numLines=\"20\" staticBetMultiplier=\"30\">" +
-                "<symbol name=\"B01\" value=\"1\" /></group>");
-
-            Assert.IsTrue(mapping.TryGet("B01", out var p));
-            Assert.AreEqual("LineBetWithStaticMult", p.Strategy.Type);
-            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("numLines", out var lines));
-            Assert.AreEqual("20", lines);
-            Assert.IsTrue(p.Strategy.Attributes.TryGetValue("staticBetMultiplier", out var staticMult));
-            Assert.AreEqual("30", staticMult);
+            Assert.AreEqual(RenderStyle.Default.Color, p.PaidStyle.Color);
+            Assert.AreEqual(RenderStyle.Default.Color, p.UnpaidStyle.Color);
         }
     }
 }

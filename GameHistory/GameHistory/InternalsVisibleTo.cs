@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
 
-// Lets the unit-test assembly exercise internal overlay types (the SpinOverlay constructor and
-// MultiplierOverlayContext) so the tile fallback-to-plain-image behaviour can be tested directly.
+// Lets the unit-test assembly use internal overlay members (the MultiplierOverlayRenderer constructor) so tile
+// rendering can be tested directly from an in-memory config.
 [assembly: InternalsVisibleTo("GameHistory.Tests")]
