@@ -207,9 +207,9 @@ namespace GameHistory.MultiplierRecompute
         /// the plain symbol image is returned unchanged. <paramref name="symbolUrl"/> must already be resolved via
         /// Url.Content.
         /// </summary>
-        public string BuildTile(string symbolUrl, string symbolName, int reelIndex, int floorIndex, decimal? dummyValue = null)
+        public string BuildTile(string symbolUrl, string symbolName, int reelIndex, int floorIndex)
         {
-            return BuildMultiplierTile(symbolUrl, symbolName, _ctx, reelIndex, floorIndex, _onceOverlayCells, _recordedGate, dummyValue);
+            return BuildMultiplierTile(symbolUrl, symbolName, _ctx, reelIndex, floorIndex, _onceOverlayCells, _recordedGate);
         }
 
         /// <summary>The plain (no-overlay) tile markup — a bare symbol image. The single definition of that markup,
@@ -326,8 +326,7 @@ namespace GameHistory.MultiplierRecompute
             int reelIndex,
             int floorIndex,
             Dictionary<string, GridCell> onceOverlayCells,
-            RecordedOverlayGate recordedGate,
-            decimal? dummyValue)
+            RecordedOverlayGate recordedGate)
         {
             // Fallback in case the symbol is not in the mapping or has no computed amount: render the plain symbol image.
             decimal amount;
@@ -339,8 +338,6 @@ namespace GameHistory.MultiplierRecompute
             {
                 return PlainTile(symbolUrl);
             }
-
-            if (dummyValue != null) amount = (decimal) dummyValue;
 
             // "Once" placement: draw the overlay only on the resolved winning cell for this group; every other
             // in-group occurrence (e.g. the two trigger 'Wh' symbols) renders as the plain symbol image.

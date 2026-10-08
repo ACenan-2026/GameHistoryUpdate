@@ -29,8 +29,6 @@ namespace GameHistory.Controllers
         private static bool isBusy = false;
         private XmlNodeList currencyNodeList = null;
 
-        private const decimal MULTIPLIER_DUMMY_VALUE = 1.23m;
-
         // ===== DEPLOY PIPELINE TEST MARKER — safe to delete after verifying =====
         // Browse to  /Home/Ping  on the local test site. Bump the "v1" text,
         // publish, then refresh: if the new text appears, source changes are
@@ -282,7 +280,7 @@ namespace GameHistory.Controllers
                                         // For a configured multiplier symbol the finalised amount is overlaid on the tile;
                                         // every other symbol renders exactly as before.
                                         html += spinOverlay != null
-                                            ? spinOverlay.BuildTile(symbolUrl, floorItem.SymbolName, reelIdx, floorIdx, MULTIPLIER_DUMMY_VALUE)
+                                            ? spinOverlay.BuildTile(symbolUrl, floorItem.SymbolName, reelIdx, floorIdx)
                                             : SpinOverlay.PlainTile(symbolUrl);
                                     html += "</tr>";
                                     html += "<br/>";
